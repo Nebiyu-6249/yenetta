@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Yenetta",
+    "slug": "yenetta",
+    "scheme": "yenetta",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "primaryColor": "#B08A45",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#F7F7F5"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yenetta.app"
+    },
+    "android": {
+      "package": "com.yenetta.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#F7F7F5"
+      }
+    },
+    "extra": {
+      "apiUrl": "http://localhost:3001"
+    }
+  }
+}
