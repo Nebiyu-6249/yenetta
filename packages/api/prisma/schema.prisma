@@ -93,6 +93,9 @@ model User {
   quizAttempts  QuizAttempt[]
   mockAttempts  MockAttempt[]
   usageEvents   UsageEvent[]
+  studyPlans      StudyPlan[]
+  learningProfile LearningProfile?
+  stats           UserStats?
 
   @@map("users")
 }
@@ -297,6 +300,67 @@ model Quota {
 
   @@unique([tier, feature])
   @@map("quotas")
+}
+
+// ───────────────────── Phase 2: plans, memory, gamification ─────────────────
+
+model StudyPlan {
+  id           String          @id @default(cuid())
+  userId       String
+  examDate     DateTime
+  dailyMinutes Int
+  status       String          @default("active") // active | completed | archived
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items StudyPlanItem[]
+
+  @@index([userId])
+  @@map("study_plans")
+}
+
+model StudyPlanItem {
+  id           String   @id @default(cuid())
+  planId       String
+  chapterId    String
+  scheduledFor DateTime
+  minutes      Int
+  order        Int      @default(0)
+  done         Boolean  @default(false)
+
+  plan StudyPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+  @@map("study_plan_items")
+}
+
+/// Long-term learning memory: a rolling summary + the user's weak chapters,
+/// injected into the tutor prompt so sessions resume with context.
+model LearningProfile {
+  userId       String   @id
+  summary      String   @default("")
+  weakChapters Json? // [{ chapterId, mastery }]
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("learning_profiles")
+}
+
+model UserStats {
+  userId           String    @id
+  xp               Int       @default(0)
+  level            Int       @default(1)
+  streakDays       Int       @default(0)
+  lastActiveAt     DateTime?
+  leaderboardOptIn Boolean   @default(false)
+  updatedAt        DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([leaderboardOptIn, xp])
+  @@map("user_stats")
 }
 
 // ════════════════════════════ CONTENT DOMAIN ════════════════════════════

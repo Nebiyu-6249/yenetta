@@ -5,4 +5,7 @@ export * from './rag';
 export * from './srs';
 export * from './study';
 export * from './exam';
+export * from './plan/schedule';
+export * from './gamification/stats';
+export * from './i18n';
 export * from './constants';

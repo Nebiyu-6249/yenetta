@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { CurrentUser, type AuthenticatedUser } from '../common/current-user.decorator';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
+import { PremiumGuard } from '../entitlements/premium.guard';
 import { StudyService, type StudyResult } from './study.service';
 import { submitQuizSchema, type SubmitQuizDto } from './study.dto';
 
@@ -29,6 +30,16 @@ export class StudyController {
   @Get('chapters/:id/quiz')
   quiz(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.study.getQuizForTaking(user.userId, id);
+  }
+
+  // Comprehensive study guides are a Premium feature (BUILD_BRIEF §6, §M7).
+  @UseGuards(PremiumGuard)
+  @Get('chapters/:id/study-guide')
+  studyGuide(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<StudyResult> {
+    return this.study.generate(user.userId, id, 'study_guide');
   }
 
   @Post('quizzes/:quizId/attempts')

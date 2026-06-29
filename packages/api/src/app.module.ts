@@ -11,7 +11,10 @@ import { CostModule } from './cost/cost.module';
 import { CurriculumModule } from './curriculum/curriculum.module';
 import { EntitlementsModule } from './entitlements/entitlements.module';
 import { ExamsModule } from './exams/exams.module';
+import { GamificationModule } from './gamification/gamification.module';
 import { HealthController } from './health/health.controller';
+import { MemoryModule } from './memory/memory.module';
+import { PlansModule } from './plans/plans.module';
 import { PaymentsModule } from './payments/payments.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProgressModule } from './progress/progress.module';
@@ -39,6 +42,9 @@ import { UsersModule } from './users/users.module';
     SrsModule,
     ExamsModule,
     PaymentsModule,
+    MemoryModule,
+    GamificationModule,
+    PlansModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

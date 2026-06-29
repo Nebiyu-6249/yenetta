@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { api, ApiError, type CitedSource } from '../../../lib/api';
+import { useI18n } from '../../../lib/i18n';
 import { Button } from '../../../components/ui';
 
 interface Message {
@@ -18,6 +19,7 @@ const SUGGESTIONS = [
 ];
 
 export default function ChatPage() {
+  const { t, locale } = useI18n();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -33,7 +35,7 @@ export default function ChatPage() {
     setMessages((m) => [...m, { role: 'user', content: message }]);
     setBusy(true);
     try {
-      const res = await api.chat(message, undefined, conversationId);
+      const res = await api.chat(message, undefined, conversationId, locale);
       setConversationId(res.conversationId);
       setMessages((m) => [
         ...m,
@@ -58,7 +60,7 @@ export default function ChatPage() {
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-flame text-2xl">
             🔥
           </div>
-          <h1 className="font-heading text-2xl font-bold text-ink">Ask your tutor anything</h1>
+          <h1 className="font-heading text-2xl font-bold text-ink">{t('askTutor')}</h1>
           <p className="mt-2 max-w-md font-body text-sm text-muted">
             Answers are grounded in your curriculum and past papers, with sources.
           </p>
