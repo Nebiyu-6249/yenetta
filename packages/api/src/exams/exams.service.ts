@@ -28,6 +28,32 @@ export class ExamsService {
     });
   }
 
+  /**
+   * Full practice questions INCLUDING answers + explanations, for caching on
+   * the offline-first mobile app (BUILD_BRIEF §M5). Grading then happens locally
+   * with the shared grader. (Question-bank IP: gate + watermark in production.)
+   */
+  downloadQuestions(filter: PracticeFilter) {
+    return this.prisma.examQuestion.findMany({
+      where: {
+        paperId: filter.paperId,
+        chapterId: filter.chapterId,
+        subjectId: filter.subjectId,
+        year: filter.year,
+      },
+      select: {
+        id: true,
+        stem: true,
+        options: true,
+        answer: true,
+        explanation: true,
+        year: true,
+        chapterId: true,
+      },
+      orderBy: { id: 'asc' },
+    });
+  }
+
   /** Practice questions WITHOUT answers — by paper, chapter, subject, or year. */
   practiceQuestions(filter: PracticeFilter) {
     return this.prisma.examQuestion.findMany({

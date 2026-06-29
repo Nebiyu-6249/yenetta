@@ -5,6 +5,77 @@ committed before pausing for human review (see `docs/BUILD_BRIEF.md` §0).
 
 ---
 
+## ✅ M5 — Android app (Expo, offline-first) — _complete (2026-06-29)_
+
+### What was done
+
+- **Offline engine (`apps/mobile/src/lib/offline`)** — the heart of M5, written
+  framework-free so it's fully unit-tested:
+  - `OfflineStore` interface with two implementations: `SqliteOfflineStore`
+    (expo-sqlite, on-device) and `InMemoryOfflineStore` (tests/fallback).
+  - `DownloadService` — caches a chapter's study pack (summary, notes,
+    flashcards) and a year's past-paper questions **with answers** for offline
+    grading; seeds SM-2 cards for new flashcards.
+  - `OfflineSrs` — spaced repetition that runs entirely on-device (shared SM-2).
+  - `OfflinePractice` — grades cached past-papers locally (shared grader) and
+    **queues the attempt** for sync.
+  - `SyncService` — flushes queued mutations to the server on reconnect; keeps
+    the queue intact while offline.
+- **Shared grading moved to `@yenetta/shared`** so the device and server grade
+  identically; a new `GET /exams/practice/download` returns full questions
+  (with answers) for caching.
+- **App layer:** AsyncStorage token storage, an API client (also satisfying the
+  offline `RemoteApi` contract) with refresh-on-401, NetInfo connectivity hook,
+  an `OfflineDataProvider` that inits SQLite and auto-flushes the sync queue when
+  back online, and an `AuthProvider`.
+- **Screens (Expo/React Native):** phone+OTP login, chat-first **Tutor**,
+  **Study** (download chapters, open offline), **Chapter** (summary/notes/
+  flashcard review with grade buttons), **Practice** (download → on-device
+  grading), and **Profile/Paywall**. Tab navigation, an offline banner, and the
+  brand theme sourced from shared tokens. `com.yenetta.app`.
+
+### Acceptance checks
+
+| Check | Result |
+| --- | --- |
+| Offline study works with no network | ✅ unit-tested: cached chapter → flashcard SR review reschedules offline |
+| Cached past-paper practice offline | ✅ unit-tested: download → grade locally → queue attempt (no network) |
+| Reconnect → progress syncs | ✅ unit-tested: `SyncService.flush` posts queued attempts; queue preserved while offline |
+| Core flows (auth, chat, study, practice, paywall) | ✅ implemented as RN screens; typecheck passes |
+| Lint / typecheck / tests | ✅ `pnpm lint`, `pnpm typecheck`, `pnpm test` (64) all pass |
+
+> The offline engine (download, on-device SR, on-device grading, reconnect sync)
+> is verified by unit tests against the in-memory store; `SqliteOfflineStore`
+> mirrors it for the device. The airplane-mode click-through on an emulator is
+> for the developer to run (`pnpm --filter @yenetta/mobile android`).
+
+### Decisions
+
+- **Spaced repetition is local-only** on the device (per-device SR state is the
+  norm and works fully offline); the sync queue carries practice/quiz attempts,
+  which is what updates server-side progress.
+- **Past-paper answers are downloaded** for offline grading via a dedicated
+  download endpoint. (Encrypt-on-device + watermarking per §9 is a follow-up.)
+- **State-based tab navigation** (no router dependency) keeps the MVP simple and
+  typecheck-clean; swap to expo-router/React Navigation later.
+- The offline services depend on interfaces (`OfflineStore`, `RemoteApi`) so the
+  whole engine is testable without a device.
+
+### Assumptions
+
+- `EXPO_PUBLIC_API_URL` points the app at the API. The practice screen uses the
+  seeded 2015 paper as the demo download; chapter downloads come from `/study`.
+
+### Next — M6 (Payments & entitlements end-to-end)
+
+- Chapa sandbox checkout, webhook verification, subscription → entitlement
+  enforcement (web + mobile), per-tier quotas live, failed/lapsed handling,
+  signed offline entitlement token.
+
+**Pausing for human review before starting M6.**
+
+---
+
 ## ✅ M4 — Website (Next.js) — _complete (2026-06-29)_
 
 ### What was done

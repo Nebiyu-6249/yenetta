@@ -17,9 +17,10 @@ not generic internet knowledge. Around the chat sit structured **Study** and
 **Exam Practice** tools, with an **offline-first Android app** for low-connectivity
 study.
 
-> **Status:** Milestone **M4 — Website** complete. A branded, SEO-ready
-> marketing site plus the full web app — phone+OTP auth, chat-first tutor, Study,
-> Exam Practice, dashboard, and paywall — on top of the M1–M3 backend. See
+> **Status:** Milestone **M5 — Android app (offline-first)** complete. The Expo
+> app adds downloads + local SQLite cache, on-device spaced repetition and
+> past-paper grading, and background sync on reconnect — on top of the M1–M4
+> backend and website. See
 > [`PROGRESS.md`](./PROGRESS.md) for the milestone log and
 > [`docs/BUILD_BRIEF.md`](./docs/BUILD_BRIEF.md) for the full build plan.
 

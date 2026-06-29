@@ -9,7 +9,7 @@
     "declaration": false,
     "declarationMap": false,
     "sourceMap": false,
-    "types": ["react"],
+    "types": ["react", "node"],
     "strict": true
   },
   "include": ["**/*.ts", "**/*.tsx"],
