@@ -12,6 +12,7 @@ import { CurriculumModule } from './curriculum/curriculum.module';
 import { EntitlementsModule } from './entitlements/entitlements.module';
 import { ExamsModule } from './exams/exams.module';
 import { HealthController } from './health/health.controller';
+import { PaymentsModule } from './payments/payments.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProgressModule } from './progress/progress.module';
 import { ProvidersModule } from './providers/providers.module';
@@ -37,6 +38,7 @@ import { UsersModule } from './users/users.module';
     StudyModule,
     SrsModule,
     ExamsModule,
+    PaymentsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

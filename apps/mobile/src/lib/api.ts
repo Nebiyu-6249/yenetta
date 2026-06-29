@@ -121,4 +121,13 @@ export const api = {
     request(`/quizzes/${quizId}/attempts`, { method: 'POST', body: { answers } }),
 
   progress: () => request<{ progress: { chapterId: string; mastery: number }[] }>('/progress'),
+
+  checkout: () =>
+    request<{ checkoutUrl: string; txRef: string }>('/payments/checkout', { method: 'POST', body: {} }),
+  redeemVoucher: (code: string) =>
+    request<{ ok: boolean }>('/payments/voucher', { method: 'POST', body: { code } }),
+  entitlementToken: () =>
+    request<{ token: string; tokenExpiresAt: string; entitlement: { tier: string } }>(
+      '/entitlements/token',
+    ),
 } satisfies RemoteApi & Record<string, unknown>;

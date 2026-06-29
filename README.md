@@ -17,10 +17,10 @@ not generic internet knowledge. Around the chat sit structured **Study** and
 **Exam Practice** tools, with an **offline-first Android app** for low-connectivity
 study.
 
-> **Status:** Milestone **M5 — Android app (offline-first)** complete. The Expo
-> app adds downloads + local SQLite cache, on-device spaced repetition and
-> past-paper grading, and background sync on reconnect — on top of the M1–M4
-> backend and website. See
+> **Status:** Milestone **M6 — Payments & entitlements** complete. Chapa
+> sandbox checkout, HMAC-verified idempotent webhooks, subscription →
+> entitlement enforcement (premium gating + live quotas), auto-downgrade on
+> expiry, and a signed offline entitlement token — across web + mobile. See
 > [`PROGRESS.md`](./PROGRESS.md) for the milestone log and
 > [`docs/BUILD_BRIEF.md`](./docs/BUILD_BRIEF.md) for the full build plan.
 
@@ -120,6 +120,10 @@ guard unless marked public.
 | `POST /api/exams/practice/submit` | bearer | Grade practice with explanations |
 | `POST /api/exams/mocks/:id/start` · `…/attempts/:id/submit` | bearer | Timed mock exams |
 | `GET /api/progress` | bearer | Mastery per chapter + weak areas |
+| `POST /api/payments/checkout` | bearer | Start a Chapa Premium checkout |
+| `POST /api/payments/webhook` | signature | Chapa webhook (HMAC-verified, idempotent) |
+| `POST /api/payments/voucher` | bearer | Redeem a scratch-code voucher |
+| `GET /api/entitlements` · `GET /api/entitlements/token` | bearer | Resolve tier · signed offline token |
 
 ### Content ingestion
 

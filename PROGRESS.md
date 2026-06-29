@@ -5,6 +5,79 @@ committed before pausing for human review (see `docs/BUILD_BRIEF.md` §0).
 
 ---
 
+## ✅ M6 — Payments & entitlements end-to-end — _complete (2026-06-29)_
+
+### What was done
+
+- **Chapa provider (real):** checkout initialization (Chapa `transaction/
+  initialize`, with a mock URL fallback when no key), **HMAC-SHA256 webhook
+  signature verification** (timing-safe), and webhook parsing. Sandbox by
+  default; flip to live by swapping keys — no code change.
+- **Payments module:** `POST /payments/checkout` (records a pending payment,
+  returns a checkout URL), `POST /payments/webhook` (raw-body, signature-
+  verified, **idempotent** — a payment already `success` is a no-op so duplicate
+  deliveries can't double-grant), and `POST /payments/voucher` (scratch-code
+  redemption stub). Successful payment **creates or extends** a Premium
+  subscription by one period.
+- **Entitlement enforcement:** `PremiumGuard` gates premium-only endpoints
+  (timed mock exams); free vs premium daily AI quotas already enforced in
+  chat/study now differ live by subscription. Lapsed/expired subscriptions
+  **auto-downgrade at read time** (the resolver only counts active, unexpired
+  subscriptions) — progress is never deleted. An `expireLapsed()` sweep tidies
+  statuses for reminders/analytics.
+- **Signed offline entitlement token:** `GET /entitlements/token` issues a JWT
+  (tier + expiry, capped to 7 days) the mobile app caches; offline premium ends
+  when the token lapses, forcing a periodic online refresh.
+- **Web + mobile wired:** the web paywall starts a real Chapa checkout and
+  redeems vouchers; the mobile Profile screen opens checkout, redeems vouchers,
+  caches the signed entitlement token, and falls back to it for **offline
+  premium gating**.
+- **Tests:** payments (checkout, verified-webhook activation, idempotency,
+  signature rejection, subscription extension, voucher) + signed-token issuance.
+
+### Acceptance checks
+
+Verified end-to-end against the live database:
+
+| Check | Result |
+| --- | --- |
+| Buy Premium (sandbox) → unlock | ✅ checkout → **signed webhook** → tier `premium`, daily AI limit 20 → 300 |
+| Premium features unlock | ✅ premium-gated mock exam: 402 (free) → 201 (premium) |
+| Simulate expiry → auto-downgrade (progress retained) | ✅ expired subscription → tier `free`, mock 402 again; data intact |
+| Quota enforcement | ✅ free 20 / premium 300 resolved from the live subscription |
+| Webhook idempotency | ✅ re-delivery returns `idempotent`; exactly one subscription row |
+| Invalid signature rejected | ✅ HTTP 401 |
+| Signed offline entitlement token | ✅ JWT issued (tier + 7-day expiry) for mobile caching |
+
+`pnpm lint`, `pnpm typecheck`, `pnpm test` (71 tests) all pass.
+
+### Decisions
+
+- **Read-time downgrade**: the entitlements resolver already excludes
+  expired/inactive subscriptions, so expiry downgrades automatically with no
+  cron on the critical path; the sweep is for tidy statuses + future reminders.
+- **No silent auto-renew** (mobile money is unreliable): checkout is an explicit
+  re-purchase; vouchers are an alternative top-up.
+- **Webhook needs the raw body** for HMAC, so Nest is bootstrapped with
+  `rawBody: true` and the route is `@Public()` (authenticated by signature).
+- The offline token is **capped at 7 days** so a cached premium token can't
+  outlive a lapsed pass indefinitely.
+
+### Assumptions
+
+- Without `CHAPA_SECRET_KEY`, checkout returns a mock URL and the purchase is
+  completed via the (signed) webhook — the live flow is identical once real
+  sandbox keys are set. The dev voucher code is `YENETTA-PREMIUM`.
+
+### Next — M7 (Phase 2)
+
+- Long-term memory / learning profile; personalized study plans; deep analytics
+  + study guides; streaks/XP/leaderboards; Amharic i18n + "explain in Amharic".
+
+**Pausing for human review before starting M7.**
+
+---
+
 ## ✅ M5 — Android app (Expo, offline-first) — _complete (2026-06-29)_
 
 ### What was done
