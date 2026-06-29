@@ -17,8 +17,10 @@ not generic internet knowledge. Around the chat sit structured **Study** and
 **Exam Practice** tools, with an **offline-first Android app** for low-connectivity
 study.
 
-> **Status:** Milestone **M1 — Backend core** complete (phone+OTP auth, JWT,
-> profile, curriculum, entitlements, provider abstractions). See
+> **Status:** Milestone **M2 — Content pipeline + RAG + grounded chat** complete.
+> The ingestion worker (OCR → clean → classify → chunk → embed → pgvector), a
+> grounded/cited tutor chat with honest fallback, cost-control middleware, and
+> the admin upload UI are live on top of the M1 backend. See
 > [`PROGRESS.md`](./PROGRESS.md) for the milestone log and
 > [`docs/BUILD_BRIEF.md`](./docs/BUILD_BRIEF.md) for the full build plan.
 
@@ -107,6 +109,27 @@ guard unless marked public.
 | `PATCH /api/users/me` | bearer | Update profile (name, grade, stream, locale) |
 | `GET /api/subjects` | bearer | List seeded subjects (filter `?grade=&stream=`) |
 | `GET /api/subjects/:id/chapters` | bearer | Chapters for a subject |
+| `POST /api/chat` | bearer | Grounded tutor: scoped retrieval → cited answer or honest fallback |
+| `GET /api/chat/conversations` | bearer | List the user's conversations |
+| `POST /api/admin/documents` | bearer | Upload a doc (multipart) → ingestion pipeline |
+| `GET /api/admin/documents/:id` | bearer | Ingestion status (`uploaded…embedded`) |
+
+### Content ingestion
+
+`extract (OCR) → clean → classify → chunk → embed → pgvector`. Two modes via
+`INGESTION_MODE`: `inline` (the API runs the pipeline — zero extra infra for
+dev) or `queue` (the API enqueues and the **BullMQ ingestion worker** processes
+it). Run the worker with `pnpm --filter @yenetta/ingestion dev`. The web admin
+page at `/admin` uploads documents and watches their status.
+
+### Grounding & cost control
+
+Tutor answers are **retrieved-then-grounded** with citations; when no chunk
+supports the question the tutor says so instead of guessing. Every AI call is
+routed to the cheapest capable model, logged to `usage_events` with an estimated
+cost, and gated by per-tier daily quotas; identical scoped questions are served
+from cache. Without an `OPENAI_API_KEY`, a deterministic stub keeps the whole
+flow working offline.
 
 Auth is phone + OTP with short-lived JWT access tokens and rotating, revocable
 refresh tokens. Entitlements are resolved server-side (free tier by default);

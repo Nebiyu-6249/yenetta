@@ -5,6 +5,92 @@ committed before pausing for human review (see `docs/BUILD_BRIEF.md` §0).
 
 ---
 
+## ✅ M2 — Content pipeline + RAG + grounded chat — _complete (2026-06-29)_
+
+### What was done
+
+- **Shared RAG primitives (`@yenetta/shared/rag`):** isomorphic, deterministic
+  embedding (FNV-1a hashing vectorizer with stopword removal + bigrams, 1536-dim
+  to match `text-embedding-3-small`), `chunkText`, `cosineSimilarity`,
+  `toPgVector`, grounded-prompt builder, and the honest-fallback constant. The
+  same embedder runs in the API (queries) and the worker (chunks) so vectors are
+  comparable without a network call; OpenAI embeddings drop in when a key is set.
+- **Ingestion worker (`@yenetta/ingestion`):** the full pipeline
+  `extract(OCR) → cleanText → classify → chunk → embed → pgvector`, exposed as
+  `runIngestionPipeline()` and wrapped by a **BullMQ worker** (`main.ts`). PDF
+  text extraction via pdf-parse (Tesseract is a future drop-in); classification
+  routes a document to the most similar chapter (embedding-based) with year
+  detection and admin overrides. Idempotent re-ingest.
+- **LLM provider, real + stub:** OpenAI `chat`/`embed` over `fetch` with tiered
+  model routing; the stub returns deterministic embeddings and a grounded answer
+  derived from the retrieved context (so the whole flow works offline/in tests).
+- **Scoped vector retrieval (`RetrievalService`):** filters by
+  subject/chapter/grade/type/year FIRST, then top-k cosine via raw SQL pgvector
+  (`embedding <=> $1::vector`).
+- **Grounded tutor chat (`POST /chat`):** quota check → scoped retrieval →
+  keep only chunks above an absolute + relative similarity gate → if none, an
+  honest "not in the curriculum yet" fallback **with no LLM call** (no
+  hallucination); otherwise a grounded, **cited** answer. Conversations + messages
+  (with `citedSources`) persisted.
+- **Cost control (`cost/`):** model router (default cheap, escalate only when
+  needed), per-call **usage logging with cost estimation** (`usage_events`),
+  per-tier **daily quota enforcement** (429 before any spend), and an in-memory
+  **response cache** for identical (scope + question) — a shared-output saving.
+- **Admin pipeline (`/admin/documents`):** multipart upload → `content_document`
+  → inline processing (dev) or **enqueue to the BullMQ worker** (`INGESTION_MODE`);
+  status endpoint for the UI. **Web admin page** (`/admin`) to upload and watch
+  status transition to `embedded`.
+- **Seed:** curriculum prose embedded per chapter (7 chunks), a sample past-exam
+  paper (Chemistry 2015) with exam-question chunks, and quota rows.
+- **Tests:** chat grounding/fallback/cache/quota, cost pricing + router + quota,
+  RAG embedding relevance + chunking + prompt, ingestion cleanText + classify.
+
+### Acceptance checks
+
+Verified end-to-end against **live Postgres 16 + pgvector + Redis**:
+
+| Check | Result |
+| --- | --- |
+| Ask about a seeded chapter → grounded answer **with sources** | ✅ "cell organelles/photosynthesis" → grounded, source = _Cell Biology_ |
+| Ask outside the corpus → honest fallback (no hallucination) | ✅ "2022 World Cup" → "not in the curriculum yet", no sources, no LLM call |
+| Admin uploads a doc → ingests → retrievable | ✅ inline AND **queue/worker** (`uploaded → embedded`, "job 1 completed"); new content answerable |
+| `usage_events` logged with cost estimates | ✅ rows per call (feature/model/tokens/cost); `gpt-4o-mini` row = $0.00042 |
+| Caching of shared outputs | ✅ identical question: call 1 `cached:false`, call 2 `cached:true` |
+
+`pnpm lint`, `pnpm typecheck`, `pnpm test` (44 tests) all pass.
+
+### Decisions
+
+- **Deterministic stub embedding is shared and isomorphic** so ingestion and
+  query embeddings always match; stopword removal + bigrams give clean
+  grounded-vs-fallback separation. Threshold = absolute floor (0.18) plus a
+  relative gate (within 55% of the top match), capped at 3 sources.
+- **Two ingestion modes:** `inline` (API runs the pipeline; zero infra for dev)
+  and `queue` (API enqueues, BullMQ worker processes). Both call the same
+  `runIngestionPipeline`. Default inline.
+- **pgvector reads/writes use raw SQL** (Prisma can't handle the `vector` type);
+  everything else stays in Prisma.
+- **Quotas enforced before spend**; usage logged after, with cost estimated from
+  a per-model price table. Stub models cost $0 (so dev/test is free).
+- **Admin endpoints are auth-only for M2**; role-based admin access is deferred.
+
+### Assumptions
+
+- "OCR" currently means PDF text-layer extraction (pdf-parse) + UTF-8 text;
+  scanned-image OCR (Tesseract) is a clean drop-in at the extract stage.
+- Chat UI is M4; the M2 web deliverable is the admin pipeline page, which takes
+  a pasted access token until the auth UI lands.
+
+### Next — M3 (Study & exam features)
+
+- Chapter summaries, study notes, flashcards (+ spaced repetition), AI quizzes.
+- Past-exam practice by year/chapter ($0 AI) + timed mock exams.
+- Per-chapter generated outputs cached; progress + weak-area detection.
+
+**Pausing for human review before starting M3.**
+
+---
+
 ## ✅ M1 — Backend core — _complete (2026-06-29)_
 
 ### What was done
