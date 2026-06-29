@@ -1,0 +1,483 @@
+// Yenetta data model (see docs/BUILD_BRIEF.md §5).
+//
+// DATA-RESIDENCY SPLIT (§9): models are grouped into a PERSONAL DATA domain
+// (accounts, auth, payments, progress, chat) and a CONTENT domain (curriculum,
+// exams, embeddings). Cross-domain references (e.g. a user's progress pointing
+// at a content chapter) are stored as PLAIN STRING IDs WITHOUT a DB-level
+// foreign key, so the personal-data tables can later move to an in-country
+// database without breaking referential integrity. Relations are only declared
+// *within* a domain.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+// ───────────────────────────── Enums ─────────────────────────────
+
+enum Stream {
+  natural
+  social
+  both
+}
+
+enum Locale {
+  en
+  am
+}
+
+enum SubscriptionTier {
+  free
+  premium
+}
+
+enum SubscriptionStatus {
+  active
+  expired
+  cancelled
+  pending
+}
+
+enum PaymentStatus {
+  pending
+  success
+  failed
+  refunded
+}
+
+enum ContentType {
+  curriculum
+  exam_question
+}
+
+enum DocumentStatus {
+  uploaded
+  ocr
+  cleaned
+  classified
+  embedded
+  failed
+}
+
+enum ChatRole {
+  user
+  assistant
+  system
+}
+
+// ════════════════════════ PERSONAL DATA DOMAIN ════════════════════════
+
+model User {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  name      String?
+  grade     Int? // 9–12
+  stream    Stream?
+  locale    Locale   @default(en)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  refreshTokens RefreshToken[]
+  subscriptions Subscription[]
+  payments      Payment[]
+  progress      UserProgress[]
+  weakAreas     WeakArea[]
+  conversations ChatConversation[]
+  srCards       SrCard[]
+  quizAttempts  QuizAttempt[]
+  mockAttempts  MockAttempt[]
+  usageEvents   UsageEvent[]
+
+  @@map("users")
+}
+
+/// One-time passcodes for phone auth. Keyed by phone (the user may not exist
+/// yet at request time). Codes are stored hashed, never in plaintext.
+model AuthOtp {
+  id         String    @id @default(cuid())
+  phone      String
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([phone, createdAt])
+  @@map("auth_otps")
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Subscription {
+  id        String             @id @default(cuid())
+  userId    String
+  tier      SubscriptionTier   @default(free)
+  status    SubscriptionStatus @default(active)
+  startedAt DateTime           @default(now())
+  expiresAt DateTime?
+  source    String? // chapa | voucher | manual
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("subscriptions")
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  userId        String
+  provider      String // chapa
+  providerTxId  String        @unique
+  amount        Decimal       @db.Decimal(12, 2)
+  currency      String        @default("ETB")
+  status        PaymentStatus @default(pending)
+  rawWebhook    Json?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("payments")
+}
+
+/// Per-chapter mastery. `chapterId` references a content Chapter by id only
+/// (no cross-domain FK — see header note).
+model UserProgress {
+  id           String    @id @default(cuid())
+  userId       String
+  chapterId    String
+  mastery      Float     @default(0) // 0..1
+  lastStudied  DateTime?
+  updatedAt    DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, chapterId])
+  @@map("user_progress")
+}
+
+model WeakArea {
+  id        String   @id @default(cuid())
+  userId    String
+  chapterId String
+  score     Float    @default(0)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("weak_areas")
+}
+
+model ChatConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@index([userId])
+  @@map("chat_conversations")
+}
+
+model ChatMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           ChatRole
+  content        String
+  citedSources   Json? // CitedSource[]
+  createdAt      DateTime @default(now())
+
+  conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@map("chat_messages")
+}
+
+/// Spaced-repetition scheduler state (SM-2/FSRS). `flashcardId` references a
+/// content Flashcard by id only (no cross-domain FK).
+model SrCard {
+  id             String    @id @default(cuid())
+  userId         String
+  flashcardId    String
+  ease           Float     @default(2.5)
+  interval       Int       @default(0) // days
+  reps           Int       @default(0)
+  lapses         Int       @default(0)
+  dueAt          DateTime  @default(now())
+  lastReviewedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, flashcardId])
+  @@index([userId, dueAt])
+  @@map("sr_cards")
+}
+
+model QuizAttempt {
+  id          String    @id @default(cuid())
+  userId      String
+  quizId      String
+  score       Float     @default(0)
+  answers     Json?
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("quiz_attempts")
+}
+
+model MockAttempt {
+  id              String    @id @default(cuid())
+  userId          String
+  mockExamId      String
+  score           Float     @default(0)
+  answers         Json?
+  durationSeconds Int?
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("mock_attempts")
+}
+
+/// Per-AI-call cost + usage telemetry (§8). `userId` optional for system jobs.
+model UsageEvent {
+  id           String   @id @default(cuid())
+  userId       String?
+  feature      String
+  model        String?
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+  costEstimate Decimal  @default(0) @db.Decimal(12, 6)
+  createdAt    DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([feature, createdAt])
+  @@map("usage_events")
+}
+
+/// Per-tier, per-feature usage caps (§8). Seeded; enforced server-side.
+model Quota {
+  id        String           @id @default(cuid())
+  tier      SubscriptionTier
+  feature   String
+  dailyCap  Int?
+  monthlyCap Int?
+
+  @@unique([tier, feature])
+  @@map("quotas")
+}
+
+// ════════════════════════════ CONTENT DOMAIN ════════════════════════════
+
+model Subject {
+  id        String   @id @default(cuid())
+  name      String
+  grade     Int
+  stream    Stream   @default(both)
+  createdAt DateTime @default(now())
+
+  chapters   Chapter[]
+  examPapers ExamPaper[]
+  chunks     ContentChunk[]
+  quizzes    Quiz[]
+
+  @@unique([name, grade, stream])
+  @@map("subjects")
+}
+
+model Chapter {
+  id         String   @id @default(cuid())
+  subjectId  String
+  grade      Int
+  unitNo     Int
+  title      String
+  objectives String[] @default([])
+  createdAt  DateTime @default(now())
+
+  subject    Subject            @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  chunks     ContentChunk[]
+  flashcards Flashcard[]
+  quizzes    Quiz[]
+  generated  GeneratedContent[]
+  examQuestions ExamQuestion[]
+
+  @@unique([subjectId, unitNo])
+  @@index([subjectId])
+  @@map("chapters")
+}
+
+model ContentDocument {
+  id         String         @id @default(cuid())
+  uploaderId String? // references a personal User by id only (no FK)
+  filename   String
+  type       ContentType    @default(curriculum)
+  status     DocumentStatus @default(uploaded)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  chunks ContentChunk[]
+
+  @@map("content_documents")
+}
+
+/// Embedded curriculum/exam chunks for RAG. `embedding` is a pgvector column
+/// (Prisma cannot read/write it directly — vector search uses raw SQL in M2).
+model ContentChunk {
+  id               String                 @id @default(cuid())
+  text             String
+  embedding        Unsupported("vector(1536)")?
+  subjectId        String?
+  chapterId        String?
+  grade            Int?
+  type             ContentType            @default(curriculum)
+  stream           Stream?
+  year             Int?
+  difficulty       Int?
+  sourceDocumentId String?
+  createdAt        DateTime               @default(now())
+
+  subject  Subject?         @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  chapter  Chapter?         @relation(fields: [chapterId], references: [id], onDelete: SetNull)
+  document ContentDocument? @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
+
+  @@index([subjectId, chapterId])
+  @@index([type, year])
+  @@map("content_chunks")
+}
+
+model ExamPaper {
+  id        String   @id @default(cuid())
+  year      Int
+  stream    Stream   @default(both)
+  subjectId String
+  createdAt DateTime @default(now())
+
+  subject   Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  questions ExamQuestion[]
+
+  @@unique([year, stream, subjectId])
+  @@map("exam_papers")
+}
+
+model ExamQuestion {
+  id          String   @id @default(cuid())
+  paperId     String
+  subjectId   String
+  chapterId   String?
+  stem        String
+  options     String[] @default([])
+  answer      String
+  explanation String?
+  difficulty  Int?
+  year        Int
+
+  paper   ExamPaper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  chapter Chapter?  @relation(fields: [chapterId], references: [id], onDelete: SetNull)
+
+  @@index([subjectId, year])
+  @@index([chapterId])
+  @@map("exam_questions")
+}
+
+model Flashcard {
+  id          String   @id @default(cuid())
+  chapterId   String
+  front       String
+  back        String
+  generatedBy String? // model id or "seed"
+  createdAt   DateTime @default(now())
+
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@index([chapterId])
+  @@map("flashcards")
+}
+
+model Quiz {
+  id          String   @id @default(cuid())
+  chapterId   String?
+  subjectId   String?
+  title       String
+  generatedBy String? // model id or "seed"
+  createdAt   DateTime @default(now())
+
+  chapter   Chapter?       @relation(fields: [chapterId], references: [id], onDelete: SetNull)
+  subject   Subject?       @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  questions QuizQuestion[]
+
+  @@map("quizzes")
+}
+
+model QuizQuestion {
+  id          String   @id @default(cuid())
+  quizId      String
+  stem        String
+  options     String[] @default([])
+  answer      String
+  explanation String?
+
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([quizId])
+  @@map("quiz_questions")
+}
+
+model MockExam {
+  id              String   @id @default(cuid())
+  title           String
+  subjectId       String?
+  year            Int?
+  stream          Stream?
+  durationSeconds Int      @default(3600)
+  createdAt       DateTime @default(now())
+
+  @@map("mock_exams")
+}
+
+/// Cached per-chapter generated study material (§8): summary, notes,
+/// flashcards, quiz, study_guide — generated once, served to all students.
+model GeneratedContent {
+  id        String   @id @default(cuid())
+  chapterId String
+  type      String // summary | notes | flashcards | quiz | study_guide
+  version   Int      @default(1)
+  content   Json
+  createdAt DateTime @default(now())
+
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@unique([chapterId, type, version])
+  @@map("generated_content")
+}

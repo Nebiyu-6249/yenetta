@@ -5,6 +5,92 @@ committed before pausing for human review (see `docs/BUILD_BRIEF.md` §0).
 
 ---
 
+## ✅ M1 — Backend core — _complete (2026-06-29)_
+
+### What was done
+
+- **Data model (Prisma):** the full §5 schema — 25 tables across a **personal-data
+  domain** (users, auth_otps, refresh_tokens, subscriptions, payments, progress,
+  weak_areas, chat, sr_cards, quiz/mock attempts, usage_events, quotas) and a
+  **content domain** (subjects, chapters, content_documents, content_chunks with
+  a `vector(1536)` pgvector column, exam_papers/questions, flashcards, quizzes,
+  mock_exams, generated_content). Cross-domain references are **plain string IDs,
+  not FKs**, so the personal-data tables can move to an in-country DB later (§9).
+- **Migration:** initial migration generated and applied; pgvector extension +
+  `vector(1536)` column verified on a live Postgres 16.
+- **Phone + OTP auth:** `POST /auth/otp/request` (rate-limited, mock SMS logs the
+  code, dev code returned outside production), `POST /auth/otp/verify`
+  (peppered-hash check, attempt lockout, consumes the code), `POST /auth/refresh`
+  (rotating refresh tokens, persisted hashed, old token revoked). JWT access +
+  refresh via `@nestjs/jwt`.
+- **Global auth:** `JwtAuthGuard` as an `APP_GUARD` — every route requires a valid
+  access token unless `@Public()`. `@CurrentUser()` injects the user id.
+- **Users/profile:** `GET /users/me`, `PATCH /users/me` (name, grade, stream,
+  locale), composed with the resolved entitlement.
+- **Curriculum taxonomy:** `GET /subjects` (filter by grade/stream),
+  `GET /subjects/:id`, `GET /subjects/:id/chapters` — auth-protected, served from
+  seeded data.
+- **Provider abstractions (wired, stubbed):** `LlmProvider` (OpenAI skeleton +
+  deterministic stub, env-selected with key-presence fallback), `SmsProvider`
+  (mock + AfroMessage/Twilio adapter stubs), `PaymentProvider` (Chapa skeleton).
+- **Entitlements skeleton:** server-side resolver, **free tier default**,
+  env-driven per-tier quotas (pure `quotasForTier` + DB-backed `resolve`).
+- **Config:** zod-validated env (`validateEnv`) with a typed `ENV` DI token;
+  fail-fast on misconfiguration. zod `ZodValidationPipe` for all request bodies.
+- **Seed:** idempotent sample dataset (3 subjects, 7 chapters, 4 quota rows).
+- **Tests:** 20 new unit tests (OTP gen/hash/rate-limit/verify/lockout, JWT
+  issue/verify/rotate/revoke, entitlement resolution, provider factories).
+
+### Acceptance checks
+
+Verified end-to-end against a **live Postgres 16 + pgvector** (migrated + seeded):
+
+| Check | Result |
+| --- | --- |
+| Register/login via OTP (dev code in response + logs) | ✅ `otp/request` returns `devCode`; `otp/verify` returns user + entitlement + tokens |
+| Seeded subjects/chapters queryable via API | ✅ `GET /subjects`, `?grade=12` filter, `/subjects/:id/chapters` all return seeded rows |
+| Auth-protected route works | ✅ `/users/me` → 401 without token, 200 with valid token |
+| Unit tests for auth + entitlements pass | ✅ 20/20 (26 across the monorepo) |
+| Extras demonstrated | ✅ OTP rate-limit (6th req → 429), bad input → 400, profile persists, refresh rotation + old-token revocation (→ 401) |
+
+`pnpm lint`, `pnpm typecheck`, `pnpm test` all pass.
+
+### Decisions
+
+- **Personal/content split via plain-ID references** (no cross-domain FKs) is the
+  concrete mechanism for the §9 data-residency requirement. Both `DATABASE_URL`
+  and `CONTENT_DATABASE_URL` exist in env; M1 runs on a single datasource and the
+  physical split is a deploy-time change (no re-architecting needed).
+- **OTP hashing** = HMAC-SHA256 peppered with `JWT_ACCESS_SECRET` (deterministic
+  lookup-by-phone, never store plaintext). **OTP rate-limiting is DB-based** for
+  M1 (counts recent rows); the Redis-backed global limiter lands with the
+  cost-control middleware in M2.
+- **Refresh tokens carry a `jti`** so two tokens issued in the same second stay
+  unique (found + fixed a unique-constraint bug during live testing).
+- **Provider stubs throw `NotImplementedException`** for not-yet-built methods so
+  accidental use fails loudly; the LLM stub returns deterministic output so dev
+  and tests work without an API key.
+- **`tsBuildInfoFile` pinned into `dist`** for the emitting packages so
+  `nest build`/`tsc` never skip emit after `dist` is deleted.
+
+### Assumptions
+
+- Curriculum browse requires auth (it's a student feature); this also satisfies
+  the "auth-protected route works" acceptance.
+- The seed is a small synthetic taxonomy so the API is queryable now; the real
+  OCR-ingested corpus + embeddings arrive in M2.
+
+### Next — M2 (Content pipeline + RAG + grounded chat)
+
+- `ingestion` worker: OCR → clean → classify → chunk → embed → pgvector.
+- Admin upload UI; seed a small synthetic content dataset with embeddings.
+- Scoped vector retrieval; grounded tutor chat with citations + honest fallback.
+- Cost-control middleware online (routing, caching, quotas, usage logging).
+
+**Pausing for human review before starting M2.**
+
+---
+
 ## ✅ M0 — Scaffold & tooling — _complete (2026-06-29)_
 
 ### What was done

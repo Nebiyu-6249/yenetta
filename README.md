@@ -17,7 +17,8 @@ not generic internet knowledge. Around the chat sit structured **Study** and
 **Exam Practice** tools, with an **offline-first Android app** for low-connectivity
 study.
 
-> **Status:** Milestone **M0 — Scaffold & tooling** complete. See
+> **Status:** Milestone **M1 — Backend core** complete (phone+OTP auth, JWT,
+> profile, curriculum, entitlements, provider abstractions). See
 > [`PROGRESS.md`](./PROGRESS.md) for the milestone log and
 > [`docs/BUILD_BRIEF.md`](./docs/BUILD_BRIEF.md) for the full build plan.
 
@@ -63,7 +64,12 @@ pnpm bootstrap          # = pnpm install && docker compose up -d
 # 2. Create your env file (never commit the real one)
 copy .env.example .env  # PowerShell;  cp .env.example .env on macOS/Linux
 
-# 3. Boot api + web + mobile (hello-world screens)
+# 3. Set up the database (migrate + seed sample data)
+pnpm --filter @yenetta/api prisma:generate
+pnpm --filter @yenetta/api prisma:migrate     # applies migrations
+pnpm --filter @yenetta/api db:seed            # seeds subjects/chapters/quotas
+
+# 4. Boot api + web + mobile (hello-world screens)
 pnpm dev
 ```
 
@@ -85,6 +91,27 @@ Then open:
 | `pnpm format`      | Prettier write                                    |
 | `pnpm docker:up`   | Start Postgres + Redis                            |
 | `pnpm docker:down` | Stop them                                         |
+
+## Backend API (M1)
+
+REST under the `/api` prefix. Every route is auth-protected by a global JWT
+guard unless marked public.
+
+| Method & path | Auth | Purpose |
+| --- | --- | --- |
+| `GET /api/health` | public | Liveness probe |
+| `POST /api/auth/otp/request` | public | Send an OTP (mock SMS logs it; dev returns `devCode`) |
+| `POST /api/auth/otp/verify` | public | Verify OTP → user + entitlement + access/refresh tokens |
+| `POST /api/auth/refresh` | public | Rotate a refresh token |
+| `GET /api/users/me` | bearer | Current profile + resolved entitlement |
+| `PATCH /api/users/me` | bearer | Update profile (name, grade, stream, locale) |
+| `GET /api/subjects` | bearer | List seeded subjects (filter `?grade=&stream=`) |
+| `GET /api/subjects/:id/chapters` | bearer | Chapters for a subject |
+
+Auth is phone + OTP with short-lived JWT access tokens and rotating, revocable
+refresh tokens. Entitlements are resolved server-side (free tier by default);
+the LLM, SMS, and payment providers sit behind swappable interfaces (mock/stub
+in M1, real implementations in later milestones).
 
 ## Architecture notes
 
