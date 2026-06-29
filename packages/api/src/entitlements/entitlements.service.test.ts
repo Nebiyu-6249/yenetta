@@ -1,3 +1,4 @@
+import { JwtService } from '@nestjs/jwt';
 import { describe, expect, it, vi } from 'vitest';
 import { type Env } from '../config/env';
 import { type PrismaService } from '../prisma/prisma.service';
@@ -6,7 +7,11 @@ import { EntitlementsService, quotasForTier } from './entitlements.service';
 const limits = { freeDailyAiLimit: 20, premiumDailyAiLimit: 300 };
 
 function makeEnv(): Env {
-  return { FREE_TIER_DAILY_AI_LIMIT: 20, PREMIUM_TIER_DAILY_AI_LIMIT: 300 } as Env;
+  return {
+    FREE_TIER_DAILY_AI_LIMIT: 20,
+    PREMIUM_TIER_DAILY_AI_LIMIT: 300,
+    JWT_ACCESS_SECRET: 'test-secret',
+  } as Env;
 }
 
 describe('quotasForTier', () => {
@@ -21,7 +26,7 @@ describe('EntitlementsService.resolve', () => {
     const prisma = {
       subscription: { findFirst: vi.fn().mockResolvedValue(subscription) },
     };
-    return new EntitlementsService(prisma as unknown as PrismaService, makeEnv());
+    return new EntitlementsService(prisma as unknown as PrismaService, new JwtService({}), makeEnv());
   }
 
   it('defaults to the free tier when there is no active subscription', async () => {
@@ -40,5 +45,21 @@ describe('EntitlementsService.resolve', () => {
     expect(ent.tier).toBe('premium');
     expect(ent.quotas.dailyAiLimit).toBe(300);
     expect(ent.expiresAt).toBe(expiresAt.toISOString());
+  });
+
+  it('issues a signed entitlement token that encodes the tier and expiry', async () => {
+    const service = makeService({
+      tier: 'premium',
+      status: 'active',
+      expiresAt: new Date(Date.now() + 2 * 86_400_000),
+    });
+    const signed = await service.issueSignedToken('user-1');
+    const payload = await new JwtService({}).verifyAsync<{ tier: string; sub: string }>(
+      signed.token,
+      { secret: 'test-secret' },
+    );
+    expect(payload.tier).toBe('premium');
+    expect(payload.sub).toBe('user-1');
+    expect(new Date(signed.tokenExpiresAt).getTime()).toBeGreaterThan(Date.now());
   });
 });

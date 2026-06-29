@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { CurrentUser, type AuthenticatedUser } from '../common/current-user.decorator';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
+import { PremiumGuard } from '../entitlements/premium.guard';
 import {
   practiceQuerySchema,
   submitMockSchema,
@@ -44,6 +45,8 @@ export class ExamsController {
     return this.exams.listMocks();
   }
 
+  // Timed mock exams are a Premium feature (BUILD_BRIEF §6).
+  @UseGuards(PremiumGuard)
   @Post('mocks/:id/start')
   startMock(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.exams.startMock(user.userId, id);

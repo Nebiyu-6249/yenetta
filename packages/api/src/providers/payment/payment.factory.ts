@@ -8,5 +8,6 @@ export function createPaymentProvider(env: Env): PaymentProvider {
     mode: env.CHAPA_MODE,
     secretKey: env.CHAPA_SECRET_KEY,
     webhookSecret: env.CHAPA_WEBHOOK_SECRET,
+    siteUrl: env.SITE_URL,
   });
 }

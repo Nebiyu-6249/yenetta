@@ -189,6 +189,10 @@ export const api = {
     }),
 
   progress: () => apiFetch<ProgressSummary>('/progress'),
+
+  checkout: () => apiFetch<{ checkoutUrl: string; txRef: string }>('/payments/checkout', { method: 'POST', body: {} }),
+  redeemVoucher: (code: string) =>
+    apiFetch<{ ok: boolean }>('/payments/voucher', { method: 'POST', body: { code } }),
 };
 
 export interface GradedResult {

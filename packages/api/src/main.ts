@@ -4,7 +4,8 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  // rawBody lets the Chapa webhook verify its HMAC signature over the raw payload.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   app.enableCors();
   app.setGlobalPrefix('api');
 

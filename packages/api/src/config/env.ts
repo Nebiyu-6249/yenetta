@@ -8,6 +8,7 @@ import { z } from 'zod';
 export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   API_PORT: z.coerce.number().int().positive().default(3001),
+  SITE_URL: z.string().default('https://www.yenetta.com'),
 
   DATABASE_URL: z.string().default('postgresql://yenetta:yenetta@localhost:5432/yenetta'),
   CONTENT_DATABASE_URL: z.string().optional(),

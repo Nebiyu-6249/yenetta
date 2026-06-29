@@ -1,7 +1,22 @@
 import type { Entitlement, UserProfile } from '@yenetta/shared';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { api, type LoginResponse } from '../lib/api';
+import { cacheEntitlement } from '../lib/entitlement-cache';
 import { clearTokens, getTokens, setTokens } from '../lib/tokens';
+
+/** Fetches and caches the signed entitlement token for offline gating. */
+async function syncEntitlementToken(): Promise<void> {
+  try {
+    const t = await api.entitlementToken();
+    await cacheEntitlement({
+      tier: t.entitlement.tier === 'premium' ? 'premium' : 'free',
+      token: t.token,
+      tokenExpiresAt: t.tokenExpiresAt,
+    });
+  } catch {
+    // Offline or transient — keep the previously cached token.
+  }
+}
 
 interface AuthState {
   user: UserProfile | null;
@@ -28,6 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const me = await api.me();
         setUser(me.user);
         setEntitlement(me.entitlement);
+        void syncEntitlementToken();
       } catch {
         await clearTokens();
       } finally {
@@ -40,6 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });
     setUser(data.user);
     setEntitlement(data.entitlement);
+    void syncEntitlementToken();
   }, []);
 
   const logout = useCallback(async () => {
