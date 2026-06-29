@@ -5,6 +5,72 @@ committed before pausing for human review (see `docs/BUILD_BRIEF.md` §0).
 
 ---
 
+## ✅ M4 — Website (Next.js) — _complete (2026-06-29)_
+
+### What was done
+
+- **Marketing site (SSR/SEO):** a branded landing page (hero, features,
+  principles, CTA) and a **pricing** page, both server-rendered. Metadata
+  (title template, description, OpenGraph/Twitter), `robots.txt`, and
+  `sitemap.xml` are wired; app/admin routes are disallowed from indexing.
+- **Auth UI:** phone + OTP login (`/login`) — request code → verify → tokens
+  stored client-side; the dev code is surfaced in non-production.
+- **App client foundation:** a typed API client (`lib/api.ts`) with bearer auth
+  and automatic refresh-on-401, and an `AuthProvider` + `useRequireAuth` guard.
+- **Chat-first home (`/chat`):** the hero surface — message the tutor, see
+  grounded answers with **source chips** and an honest "not in the curriculum"
+  marker; quota-limit (429) prompts an upgrade.
+- **Study (`/study`, `/study/[chapterId]`):** browse subjects → chapters, then a
+  tabbed chapter view — Summary, Notes, flip **Flashcards**, and an interactive
+  **Quiz** that grades against the API.
+- **Exam Practice (`/practice`):** past-paper practice (answer → graded with
+  explanations) and **timed mock exams** with a live countdown.
+- **Dashboard (`/dashboard`):** per-chapter mastery bars and focus (weak) areas.
+- **Paywall (`/paywall`) + plan cards:** Free vs Premium, current-plan aware,
+  with the Chapa checkout note (wired in M6).
+- **Design system:** a small UI kit (Button, Card, Badge, Spinner, Logo) on the
+  Yenetta brand tokens — warm, calm, premium; light mode; responsive with a
+  mobile nav.
+
+### Acceptance checks
+
+| Check | Result |
+| --- | --- |
+| Production build of the whole site | ✅ `next build` — all 14 routes; marketing pages static |
+| Marketing SSR + SEO | ✅ `<title>`, meta description, hero copy render server-side; `robots.txt` + `sitemap.xml` 200 |
+| Full journey wired | ✅ sign up → chat → study a chapter → practice a paper → paywall (client routes build + target the verified API) |
+| Lint / typecheck / tests | ✅ `pnpm lint`, `pnpm typecheck`, `pnpm test` (58) all pass |
+
+> The marketing SSR/SEO and the production build of every app route were verified
+> here; the click-through journey runs against the M1–M3 API that this typed
+> client targets (all of which was verified end-to-end in earlier milestones).
+
+### Decisions
+
+- **Whole repo aligned on React 19.** Next 15 requires React 19, so mobile was
+  bumped to **Expo SDK 53** (React 19 / RN 0.79) and `react`/`react-dom` pinned
+  via pnpm overrides — this removes the React 18/19 split that otherwise paired
+  mismatched copies under the hoisted node-linker (which broke `next build`).
+- **Auth tokens in `localStorage`** with refresh-on-401 for the MVP; httpOnly
+  cookies are a future hardening step.
+- **App pages are client components** behind a client-side auth guard; marketing
+  pages stay server components for SEO.
+
+### Assumptions
+
+- `NEXT_PUBLIC_API_URL` points the web app at the API (default
+  `http://localhost:3001`). The admin page and app pages need the API running.
+
+### Next — M5 (Android app, offline-first)
+
+- Expo app: auth, chat-first home, Study, Exam Practice, **downloads + local
+  SQLite cache**, offline study (cached content, flashcards, SR in airplane
+  mode), background sync, paywall.
+
+**Pausing for human review before starting M5.**
+
+---
+
 ## ✅ M3 — Study & exam features — _complete (2026-06-29)_
 
 ### What was done

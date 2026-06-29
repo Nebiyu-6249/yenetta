@@ -17,10 +17,9 @@ not generic internet knowledge. Around the chat sit structured **Study** and
 **Exam Practice** tools, with an **offline-first Android app** for low-connectivity
 study.
 
-> **Status:** Milestone **M3 — Study & exam features** complete. On top of the
-> M2 RAG backend: per-chapter generators (summary/notes/flashcards/quiz, cached),
-> SM-2 spaced repetition, past-exam practice ($0 AI), timed mock exams, and
-> progress + weak-area tracking. See
+> **Status:** Milestone **M4 — Website** complete. A branded, SEO-ready
+> marketing site plus the full web app — phone+OTP auth, chat-first tutor, Study,
+> Exam Practice, dashboard, and paywall — on top of the M1–M3 backend. See
 > [`PROGRESS.md`](./PROGRESS.md) for the milestone log and
 > [`docs/BUILD_BRIEF.md`](./docs/BUILD_BRIEF.md) for the full build plan.
 
@@ -46,7 +45,7 @@ yenetta/
 | Database     | PostgreSQL 16 + pgvector                           |
 | Cache/queue  | Redis + BullMQ                                     |
 | Web          | Next.js (App Router) + Tailwind CSS                |
-| Mobile       | React Native (Expo), local SQLite, offline-first   |
+| Mobile       | React Native (Expo SDK 53, React 19), local SQLite, offline-first |
 | AI           | OpenAI (default) behind a provider abstraction     |
 | Payments     | Chapa (sandbox first)                              |
 | SMS (OTP)    | Pluggable (mock in dev)                            |

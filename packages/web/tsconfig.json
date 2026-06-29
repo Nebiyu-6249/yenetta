@@ -12,10 +12,18 @@
     "declaration": false,
     "declarationMap": false,
     "sourceMap": false,
-    "plugins": [{ "name": "next" }],
+    // Pin auto-included @types to the nearest copies so the workspace's other
+    // React major (mobile uses @types/react 18) can't leak in and clash.
+    "types": ["react", "react-dom", "node"],
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
     "paths": {
       "@/*": ["./*"]
-    }
+    },
+    "isolatedModules": true
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules", ".next", "dist"]
