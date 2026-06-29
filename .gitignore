@@ -45,3 +45,7 @@ Thumbs.db
 
 # Prisma
 packages/api/prisma/*.db
+
+# Locally pre-fetched Prisma engines (build-environment workaround; the
+# developer's machine downloads these normally via `prisma generate`).
+.prisma-engines/
