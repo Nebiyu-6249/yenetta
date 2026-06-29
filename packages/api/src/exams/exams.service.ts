@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { Stream } from '@prisma/client';
 import { gradeAnswers, type GradedResult, type SubmittedAnswer } from '../common/grading';
+import { StatsService } from '../gamification/stats.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProgressService } from '../progress/progress.service';
 
@@ -16,6 +17,7 @@ export class ExamsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly progress: ProgressService,
+    private readonly stats: StatsService,
   ) {}
 
   // ── Past-exam practice (pure DB, $0 AI) ─────────────────────────────────
@@ -76,6 +78,7 @@ export class ExamsService {
     });
     const graded = gradeAnswers(questions, answers);
     await this.updateProgressByChapter(userId, questions, graded);
+    void this.stats.award(userId, 'practice');
     return graded;
   }
 
@@ -133,6 +136,7 @@ export class ExamsService {
       },
     });
     await this.updateProgressByChapter(userId, questions, graded);
+    void this.stats.award(userId, 'mock');
     return graded;
   }
 

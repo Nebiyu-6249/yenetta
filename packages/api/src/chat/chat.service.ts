@@ -12,6 +12,8 @@ import { type Env } from '../config/env';
 import { ModelRouter } from '../cost/model-router';
 import { UsageService } from '../cost/usage.service';
 import { EntitlementsService } from '../entitlements/entitlements.service';
+import { StatsService } from '../gamification/stats.service';
+import { MemoryService } from '../memory/memory.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { LLM_PROVIDER, type LlmProvider } from '../providers/llm/llm-provider.interface';
 import {
@@ -38,6 +40,8 @@ export class ChatService {
     private readonly usage: UsageService,
     private readonly router: ModelRouter,
     private readonly cache: ResponseCacheService,
+    private readonly memory: MemoryService,
+    private readonly stats: StatsService,
     @Inject(LLM_PROVIDER) private readonly llm: LlmProvider,
     @Inject(ENV) private readonly env: Env,
   ) {}
@@ -47,6 +51,7 @@ export class ChatService {
     message: string,
     scope: RetrievalScope = {},
     conversationId?: string,
+    language: 'en' | 'am' = 'en',
   ): Promise<ChatResult> {
     // 1. Server-side quota enforcement BEFORE any spend.
     const entitlement = await this.entitlements.resolve(userId);
@@ -55,8 +60,8 @@ export class ChatService {
     const convId = await this.ensureConversation(userId, conversationId, message);
     await this.persistMessage(convId, 'user', message, null);
 
-    // 2. Cache: identical (scope + question) is answered once, reused.
-    const cacheKey = this.cache.key(scope, message);
+    // 2. Cache: identical (scope + language + question) is answered once, reused.
+    const cacheKey = this.cache.key({ ...scope, language }, message);
     const cached = this.cache.get(cacheKey);
     if (cached) {
       await this.persistMessage(convId, 'assistant', cached.answer, cached.sources);
@@ -90,7 +95,9 @@ export class ChatService {
       return { conversationId: convId, answer, sources: [], grounded: false, cached: false };
     }
 
-    // 5. Grounded generation with citations.
+    // 5. Grounded generation with citations, personalized by long-term memory
+    //    and answered in the requested language (Amharic when language='am').
+    const studentContext = await this.memory.getContext(userId).catch(() => '');
     const prompt = buildGroundedPrompt(
       message,
       supporting.map((c) => ({
@@ -99,6 +106,7 @@ export class ChatService {
         type: c.type,
         year: c.year,
       })),
+      { studentContext: studentContext || undefined, language },
     );
     const tier = this.router.tierForTask('chat');
     const result = await this.llm.chat({
@@ -117,6 +125,7 @@ export class ChatService {
       outputTokens: result.outputTokens,
     });
     this.cache.set(cacheKey, { answer: result.content, sources });
+    void this.stats.award(userId, 'chat');
 
     return {
       conversationId: convId,

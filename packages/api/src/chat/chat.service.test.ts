@@ -23,6 +23,8 @@ function makeMocks() {
     get: vi.fn().mockReturnValue(null),
     set: vi.fn(),
   };
+  const memory = { getContext: vi.fn().mockResolvedValue('') };
+  const stats = { award: vi.fn().mockResolvedValue(undefined) };
   const llm = {
     chat: vi.fn().mockResolvedValue({
       content: 'A cell is the basic unit of life.',
@@ -40,10 +42,12 @@ function makeMocks() {
     usage as never,
     router as never,
     cache as never,
+    memory as never,
+    stats as never,
     llm as never,
     env,
   );
-  return { service, prisma, retrieval, entitlements, usage, router, cache, llm };
+  return { service, prisma, retrieval, entitlements, usage, router, cache, llm, memory, stats };
 }
 
 const supportingChunk = {

@@ -50,13 +50,28 @@ function formatContext(contexts: RetrievedContext[]): string {
     .join('\n\n');
 }
 
+export interface GroundedPromptOptions {
+  /** Long-term memory: a short note on the student's weak areas/mistakes. */
+  studentContext?: string;
+  /** When 'am', instruct the model to answer in Amharic ("explain in Amharic"). */
+  language?: 'en' | 'am';
+}
+
 /** Builds the grounded message array sent to the routed LLM. */
 export function buildGroundedPrompt(
   question: string,
   contexts: RetrievedContext[],
+  options: GroundedPromptOptions = {},
 ): PromptMessage[] {
+  const system = [SYSTEM_PROMPT];
+  if (options.language === 'am') {
+    system.push('Respond in Amharic (በአማርኛ መልስ ስጥ), keeping any cited chapter titles as given.');
+  }
+  if (options.studentContext) {
+    system.push(`STUDENT CONTEXT (use to personalize, do not contradict): ${options.studentContext}`);
+  }
   return [
-    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'system', content: system.join(' ') },
     {
       role: 'user',
       content: `CONTEXT:\n${formatContext(contexts)}\n\nSTUDENT QUESTION:\n${question}\n\nAnswer using only the context above and cite your sources.`,

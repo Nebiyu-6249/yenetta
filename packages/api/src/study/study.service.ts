@@ -9,11 +9,12 @@ import {
 } from '@yenetta/shared';
 import { UsageService } from '../cost/usage.service';
 import { EntitlementsService } from '../entitlements/entitlements.service';
+import { StatsService } from '../gamification/stats.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProgressService } from '../progress/progress.service';
 import { gradeAnswers, type SubmittedAnswer } from '../common/grading';
 
-export type StudyContentType = 'summary' | 'notes' | 'flashcards' | 'quiz';
+export type StudyContentType = 'summary' | 'notes' | 'flashcards' | 'quiz' | 'study_guide';
 
 export interface StudyResult {
   type: StudyContentType;
@@ -31,6 +32,7 @@ export class StudyService {
     private readonly entitlements: EntitlementsService,
     private readonly usage: UsageService,
     private readonly progress: ProgressService,
+    private readonly stats: StatsService,
   ) {}
 
   /** Ensures the chapter quiz exists, then returns it WITHOUT the answers. */
@@ -76,6 +78,7 @@ export class StudyService {
     if (quiz.chapterId) {
       await this.progress.recordResult(userId, quiz.chapterId, graded.scoreFraction);
     }
+    void this.stats.award(userId, 'quiz');
     return graded;
   }
 
@@ -141,6 +144,14 @@ export class StudyService {
         await this.persistQuiz(chapterId, subjectId, questions);
         return { questions };
       }
+      case 'study_guide':
+        return {
+          guide: {
+            overview: buildSummary(text, 4),
+            keyPoints: buildNotes(text, 8),
+            flashcards: buildFlashcards(text, 6),
+          },
+        };
     }
   }
 

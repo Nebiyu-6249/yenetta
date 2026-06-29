@@ -147,8 +147,16 @@ export const api = {
   subjects: (grade?: number) => apiFetch<Subject[]>(`/subjects${grade ? `?grade=${grade}` : ''}`),
   chapters: (subjectId: string) => apiFetch<Chapter[]>(`/subjects/${subjectId}/chapters`),
 
-  chat: (message: string, scope?: Record<string, unknown>, conversationId?: string) =>
-    apiFetch<ChatResponse>('/chat', { method: 'POST', body: { message, scope, conversationId } }),
+  chat: (
+    message: string,
+    scope?: Record<string, unknown>,
+    conversationId?: string,
+    language?: 'en' | 'am',
+  ) =>
+    apiFetch<ChatResponse>('/chat', {
+      method: 'POST',
+      body: { message, scope, conversationId, language },
+    }),
 
   studyContent: (chapterId: string, type: 'summary' | 'notes' | 'flashcards') =>
     apiFetch<{ type: string; content: Record<string, unknown>; cached: boolean }>(

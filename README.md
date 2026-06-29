@@ -17,12 +17,12 @@ not generic internet knowledge. Around the chat sit structured **Study** and
 **Exam Practice** tools, with an **offline-first Android app** for low-connectivity
 study.
 
-> **Status:** Milestone **M6 — Payments & entitlements** complete. Chapa
-> sandbox checkout, HMAC-verified idempotent webhooks, subscription →
-> entitlement enforcement (premium gating + live quotas), auto-downgrade on
-> expiry, and a signed offline entitlement token — across web + mobile. See
-> [`PROGRESS.md`](./PROGRESS.md) for the milestone log and
-> [`docs/BUILD_BRIEF.md`](./docs/BUILD_BRIEF.md) for the full build plan.
+> **Status:** All milestones **M0–M7 complete.** Phase 2 (M7) adds long-term
+> learning memory, personalized study plans, deep analytics + study guides,
+> streaks/XP/opt-in leaderboards, and Amharic i18n + "explain in Amharic" — on
+> top of the grounded RAG tutor, study/exam tools, offline-first Android app,
+> and Chapa payments. See [`PROGRESS.md`](./PROGRESS.md) for the milestone log
+> and [`docs/BUILD_BRIEF.md`](./docs/BUILD_BRIEF.md) for the full build plan.
 
 ## Monorepo layout
 
@@ -124,6 +124,12 @@ guard unless marked public.
 | `POST /api/payments/webhook` | signature | Chapa webhook (HMAC-verified, idempotent) |
 | `POST /api/payments/voucher` | bearer | Redeem a scratch-code voucher |
 | `GET /api/entitlements` · `GET /api/entitlements/token` | bearer | Resolve tier · signed offline token |
+| `POST /api/plans` · `POST /api/plans/:id/adapt` | premium | Personalized study plan (generate / adapt) |
+| `GET /api/memory` | bearer | Long-term learning profile (weak areas) |
+| `GET /api/stats` · `GET /api/leaderboard` | bearer | XP / streak / level · opt-in leaderboard |
+| `GET /api/analytics` | bearer | Progress + weak areas + gamification stats |
+| `GET /api/chapters/:id/study-guide` | premium | Comprehensive study guide |
+| `POST /api/chat` (`language: "am"`) | bearer | Tutor; Amharic explanation + long-term memory |
 
 ### Content ingestion
 

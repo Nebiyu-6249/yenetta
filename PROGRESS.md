@@ -5,6 +5,70 @@ committed before pausing for human review (see `docs/BUILD_BRIEF.md` §0).
 
 ---
 
+## ✅ M7 — Phase 2 (memory, plans, analytics, gamification, Amharic) — _complete (2026-06-29)_
+
+### What was done
+
+- **DB migration** adding the Phase-2 tables: `study_plans` + `study_plan_items`,
+  `learning_profiles` (long-term memory), `user_stats` (XP/streak/level/opt-in).
+- **Shared, pure algorithms (`@yenetta/shared`):** `buildStudySchedule`
+  (spreads chapters across days to an exam date within a daily budget),
+  gamification (`xpForActivity`, `levelForXp`, `updateStreak`), and an **i18n
+  catalog (en + am) with `t()`** — all unit-tested.
+- **Long-term memory (`MemoryService`):** builds a learning profile from the
+  student's weak chapters and injects it into the tutor prompt, so **sessions
+  resume with memory of prior mistakes/mastery**. `GET /memory`.
+- **Personalized study plans (`PlansService`, Premium):** generate from an exam
+  date + daily minutes (weak chapters first), `adapt` re-prioritizes the
+  remaining items by current mastery, mark items complete. `POST /plans`,
+  `GET /plans/current`, `POST /plans/:id/adapt`.
+- **Deep analytics + study guides:** `GET /analytics` (progress + weak areas +
+  stats); premium per-chapter **study guides** (`GET /chapters/:id/study-guide`).
+- **Streaks / XP / opt-in leaderboard (`StatsService`):** XP awarded on chat,
+  quiz, practice, and mock; daily streaks; levels; `GET /stats`,
+  `GET /leaderboard`, opt-in toggle.
+- **Amharic i18n + "explain in Amharic":** the grounded prompt takes a
+  `language` option (adds an Amharic instruction + the memory context); chat
+  accepts `language: 'am'`. The web app has a **locale toggle** (EN/አማ) that
+  switches UI strings via the shared catalog and sends Amharic chat requests.
+- **Premium gating** applied to plans and study guides (+ M6 mock exams).
+
+### Acceptance checks
+
+Verified end-to-end against the live database:
+
+| Check | Result |
+| --- | --- |
+| Study plan generated from an exam date | ✅ 7 scheduled items across days; weak chapters first |
+| Plan adapts to performance | ✅ `adapt` re-prioritizes remaining items by current mastery |
+| Sessions resume with memory | ✅ learning profile (“still working on: Acids, Bases and Salts”) injected into the grounded prompt |
+| Toggling Amharic switches UI strings + Amharic explanations | ✅ shared `t('am', …)` strings; grounded chat with `language='am'` carries an Amharic instruction (web EN/አማ toggle) |
+| Premium gating applied | ✅ plans & study guides 402 for free, 200/201 for premium |
+| Streaks / XP / leaderboard | ✅ XP awarded per activity (practice +15, chat +2), streak, opt-in leaderboard |
+
+`pnpm lint`, `pnpm typecheck`, `pnpm test` (77 tests) all pass; `next build` OK.
+
+### Decisions
+
+- **Memory is derived from progress** (weak chapters) and injected as a short
+  prompt context — deterministic and cheap; richer episodic memory can layer on.
+- **Amharic explanations** are driven by a prompt instruction (real Amharic text
+  comes from OpenAI; the offline stub stays English). UI strings are fully
+  switchable now via the shared catalog.
+- **Plans prioritize weak chapters first**, then unstudied, then mastered; the
+  schedule is a pure function so it's reproducible and testable.
+- Mobile consumes the same shared i18n catalog; full mobile screen localization
+  is a fast follow (the `t()` plumbing is in place).
+
+### Build complete
+
+All milestones **M0–M7** are implemented, tested, and pushed. The product spans:
+a grounded RAG tutor, study + exam tools with spaced repetition, an offline-first
+Android app, Chapa payments with entitlement enforcement, and Phase-2 memory /
+plans / analytics / gamification / Amharic.
+
+---
+
 ## ✅ M6 — Payments & entitlements end-to-end — _complete (2026-06-29)_
 
 ### What was done

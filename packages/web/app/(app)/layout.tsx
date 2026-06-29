@@ -2,19 +2,22 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import type { MessageKey } from '@yenetta/shared';
 import { Logo } from '../../components/logo';
 import { Spinner } from '../../components/ui';
 import { useRequireAuth } from '../../lib/auth';
+import { useI18n } from '../../lib/i18n';
 
-const NAV = [
-  { href: '/chat', label: 'Tutor' },
-  { href: '/study', label: 'Study' },
-  { href: '/practice', label: 'Exam Practice' },
-  { href: '/dashboard', label: 'Dashboard' },
+const NAV: { href: string; key: MessageKey }[] = [
+  { href: '/chat', key: 'navTutor' },
+  { href: '/study', key: 'navStudy' },
+  { href: '/practice', key: 'navPractice' },
+  { href: '/dashboard', key: 'navDashboard' },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, entitlement, loading, logout } = useRequireAuth();
+  const { t, locale, setLocale } = useI18n();
   const pathname = usePathname();
 
   if (loading || !user) {
@@ -44,13 +47,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       active ? 'bg-cream font-semibold text-bronze' : 'text-muted hover:text-ink'
                     }`}
                   >
-                    {item.label}
+                    {t(item.key)}
                   </Link>
                 );
               })}
             </nav>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setLocale(locale === 'en' ? 'am' : 'en')}
+              className="rounded-full border border-gold/20 px-2.5 py-1 font-body text-xs text-muted hover:text-ink"
+              aria-label="Toggle language"
+            >
+              {locale === 'en' ? 'አማ' : 'EN'}
+            </button>
             <Link
               href="/paywall"
               className={`rounded-full px-3 py-1 font-body text-xs font-medium ${
@@ -82,7 +92,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   active ? 'bg-cream font-semibold text-bronze' : 'text-muted'
                 }`}
               >
-                {item.label}
+                {t(item.key)}
               </Link>
             );
           })}
