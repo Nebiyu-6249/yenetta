@@ -5,6 +5,81 @@ committed before pausing for human review (see `docs/BUILD_BRIEF.md` §0).
 
 ---
 
+## ✅ M3 — Study & exam features — _complete (2026-06-29)_
+
+### What was done
+
+- **Shared, pure algorithms (`@yenetta/shared`):** an **SM-2 spaced-repetition
+  scheduler** (`scheduleSm2`, isomorphic so it also runs offline on mobile) and
+  **deterministic extractive generators** (`buildSummary/Notes/Flashcards/Quiz`)
+  that produce study content from chapter text at $0 AI — swappable for
+  abstractive LLM generation behind the same shapes.
+- **Study generators + caching (`StudyService`):** per-chapter summary, study
+  notes, flashcards, and fill-in-the-blank quizzes. Generated **once and cached**
+  in `generated_content` (keyed by chapter+type+version); flashcards and quizzes
+  are also persisted as rows so SRS and quiz-taking can reference them. Quota
+  checked + usage logged per request (cache hits cost nothing).
+- **Spaced repetition (`SrsService`):** seeds SR cards from a chapter's
+  flashcards, lists due cards, and reschedules on review via SM-2
+  (`GET /srs/due`, `POST /srs/review`).
+- **Quizzes:** `GET /chapters/:id/quiz` returns questions without answers;
+  `POST /quizzes/:id/attempts` grades, persists the attempt, and updates mastery.
+- **Past-exam practice (`ExamsService`, $0 AI):** `GET /exams/papers`,
+  `GET /exams/practice` (by year/chapter/subject, answers hidden), and
+  `POST /exams/practice/submit` — pure DB grading with stored explanations.
+- **Timed mock exams:** `GET /exams/mocks`, `POST /exams/mocks/:id/start`
+  (returns questions + duration + an attempt id), and
+  `POST /exams/mocks/attempts/:id/submit` (records duration, grades, updates
+  mastery).
+- **Progress + weak-area detection (`ProgressService`):** mastery as an
+  exponential moving average per chapter, updated from quiz/practice/mock
+  results; weak areas derived from low mastery. `GET /progress`.
+- **Shared grading** helper (`gradeAnswers`) used by quizzes, practice, and mocks.
+- **Seed:** a timed mock exam over the sample 2015 Chemistry paper.
+- **Tests:** SM-2 scheduling, extractive generators, grading, and progress EMA.
+
+### Acceptance checks
+
+Verified end-to-end against the live database:
+
+| Check | Result |
+| --- | --- |
+| Generate summary/notes/flashcards/quiz for a chapter | ✅ all four generated from chapter text |
+| Second call served from cache | ✅ summary `cached:false` then `cached:true` |
+| Take a past-paper practice | ✅ `/exams/practice` → submit → 2/2 with explanations ($0 AI) |
+| Take a timed mock exam | ✅ start (1800s, attempt id) → submit (duration recorded) → 2/2 |
+| Quiz + spaced repetition | ✅ quiz 1/1; SR due card → review → next interval scheduled |
+| Progress updates and persists | ✅ mastery tracked per chapter across activities |
+
+`pnpm lint`, `pnpm typecheck`, `pnpm test` (58 tests) all pass.
+
+### Decisions
+
+- **Generators are deterministic/extractive** (sentence + definition extraction)
+  so study material is $0, reproducible, cached once, and works offline/in tests;
+  LLM-backed abstractive generation drops in behind the same interfaces later.
+- **Weak areas are derived from `user_progress` mastery** (< 0.5) rather than
+  written to a separate table in M3; the `weak_areas` table remains for future
+  explicit tagging.
+- **Mastery is an EMA** (0.6·prev + 0.4·new) so it adapts but keeps history.
+- Mock questions are sourced from `exam_questions` matching the mock's
+  subject/year; grading is shared across quiz/practice/mock.
+
+### Assumptions
+
+- Quiz generation yields as many fill-in-the-blank items as the chapter has
+  clean definitional sentences (1+ for the seeded chapters); richer item types
+  come with LLM-backed generation.
+
+### Next — M4 (Website)
+
+- Marketing/landing pages + the web app: auth UI, chat-first home, Study and
+  Exam Practice sections, dashboard/progress, paywall UI — polished to the brand.
+
+**Pausing for human review before starting M4.**
+
+---
+
 ## ✅ M2 — Content pipeline + RAG + grounded chat — _complete (2026-06-29)_
 
 ### What was done
