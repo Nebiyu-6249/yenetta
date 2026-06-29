@@ -17,10 +17,10 @@ not generic internet knowledge. Around the chat sit structured **Study** and
 **Exam Practice** tools, with an **offline-first Android app** for low-connectivity
 study.
 
-> **Status:** Milestone **M2 — Content pipeline + RAG + grounded chat** complete.
-> The ingestion worker (OCR → clean → classify → chunk → embed → pgvector), a
-> grounded/cited tutor chat with honest fallback, cost-control middleware, and
-> the admin upload UI are live on top of the M1 backend. See
+> **Status:** Milestone **M3 — Study & exam features** complete. On top of the
+> M2 RAG backend: per-chapter generators (summary/notes/flashcards/quiz, cached),
+> SM-2 spaced repetition, past-exam practice ($0 AI), timed mock exams, and
+> progress + weak-area tracking. See
 > [`PROGRESS.md`](./PROGRESS.md) for the milestone log and
 > [`docs/BUILD_BRIEF.md`](./docs/BUILD_BRIEF.md) for the full build plan.
 
@@ -113,6 +113,13 @@ guard unless marked public.
 | `GET /api/chat/conversations` | bearer | List the user's conversations |
 | `POST /api/admin/documents` | bearer | Upload a doc (multipart) → ingestion pipeline |
 | `GET /api/admin/documents/:id` | bearer | Ingestion status (`uploaded…embedded`) |
+| `GET /api/chapters/:id/{summary,notes,flashcards,quiz}` | bearer | Per-chapter study content (generated once, cached) |
+| `POST /api/quizzes/:id/attempts` | bearer | Grade a quiz attempt, update mastery |
+| `GET /api/srs/due` · `POST /api/srs/review` | bearer | Spaced repetition (SM-2) |
+| `GET /api/exams/papers` · `GET /api/exams/practice` | bearer | Past-exam practice ($0 AI) |
+| `POST /api/exams/practice/submit` | bearer | Grade practice with explanations |
+| `POST /api/exams/mocks/:id/start` · `…/attempts/:id/submit` | bearer | Timed mock exams |
+| `GET /api/progress` | bearer | Mastery per chapter + weak areas |
 
 ### Content ingestion
 

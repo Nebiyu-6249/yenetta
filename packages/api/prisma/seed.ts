@@ -236,6 +236,20 @@ async function main(): Promise<void> {
     `  • Sample exam paper ${EXAM.subjectName} ${EXAM.year} — ${EXAM.questions.length} questions`,
   );
 
+  // A timed mock exam drawing on the seeded paper's questions.
+  const mockTitle = `${EXAM.subjectName} ${EXAM.year} Mock Exam`;
+  await prisma.mockExam.deleteMany({ where: { title: mockTitle } });
+  await prisma.mockExam.create({
+    data: {
+      title: mockTitle,
+      subjectId: examSubject.id,
+      year: EXAM.year,
+      stream: EXAM.stream,
+      durationSeconds: 1800,
+    },
+  });
+  console.log(`  • Mock exam "${mockTitle}" (30 min)`);
+
   for (const quota of QUOTAS) {
     await prisma.quota.upsert({
       where: { tier_feature: { tier: quota.tier, feature: quota.feature } },

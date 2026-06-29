@@ -10,10 +10,14 @@ import { ContentModule } from './content/content.module';
 import { CostModule } from './cost/cost.module';
 import { CurriculumModule } from './curriculum/curriculum.module';
 import { EntitlementsModule } from './entitlements/entitlements.module';
+import { ExamsModule } from './exams/exams.module';
 import { HealthController } from './health/health.controller';
 import { PrismaModule } from './prisma/prisma.module';
+import { ProgressModule } from './progress/progress.module';
 import { ProvidersModule } from './providers/providers.module';
 import { RetrievalModule } from './retrieval/retrieval.module';
+import { SrsModule } from './srs/srs.module';
+import { StudyModule } from './study/study.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -29,6 +33,10 @@ import { UsersModule } from './users/users.module';
     RetrievalModule,
     ChatModule,
     ContentModule,
+    ProgressModule,
+    StudyModule,
+    SrsModule,
+    ExamsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
