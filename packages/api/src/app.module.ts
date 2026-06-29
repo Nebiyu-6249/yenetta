@@ -4,12 +4,16 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { ChatModule } from './chat/chat.module';
 import { AppConfigModule } from './config/config.module';
+import { ContentModule } from './content/content.module';
+import { CostModule } from './cost/cost.module';
 import { CurriculumModule } from './curriculum/curriculum.module';
 import { EntitlementsModule } from './entitlements/entitlements.module';
 import { HealthController } from './health/health.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProvidersModule } from './providers/providers.module';
+import { RetrievalModule } from './retrieval/retrieval.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -21,6 +25,10 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     EntitlementsModule,
     CurriculumModule,
+    CostModule,
+    RetrievalModule,
+    ChatModule,
+    ContentModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

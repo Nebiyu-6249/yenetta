@@ -1,4 +1,4 @@
-import { Logger, NotImplementedException } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import {
   type LlmChatOptions,
   type LlmChatResult,
@@ -14,14 +14,21 @@ export interface OpenAiModelConfig {
   embedding: string;
 }
 
-/**
- * OpenAI implementation skeleton (BUILD_BRIEF §4.1). Model routing + real calls
- * (with usage logging and prompt caching) are implemented in M2; for now the
- * class is wired and selectable but methods are not yet live.
- */
+interface ChatCompletionResponse {
+  choices: { message: { content: string } }[];
+  usage?: { prompt_tokens: number; completion_tokens: number };
+}
+
+interface EmbeddingResponse {
+  data: { embedding: number[] }[];
+  usage?: { prompt_tokens: number };
+}
+
+/** OpenAI implementation of the LLM provider (BUILD_BRIEF §4.1). */
 export class OpenAiLlmProvider implements LlmProvider {
   readonly name = 'openai';
   private readonly logger = new Logger(OpenAiLlmProvider.name);
+  private readonly baseUrl = 'https://api.openai.com/v1';
 
   constructor(private readonly config: OpenAiModelConfig) {}
 
@@ -36,13 +43,48 @@ export class OpenAiLlmProvider implements LlmProvider {
     }
   }
 
-  async chat(_options: LlmChatOptions): Promise<LlmChatResult> {
-    this.logger.warn('OpenAI chat() not implemented until M2');
-    throw new NotImplementedException('OpenAI provider chat() lands in M2');
+  private async post<T>(path: string, body: unknown): Promise<T> {
+    const res = await fetch(`${this.baseUrl}${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.config.apiKey}`,
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      this.logger.error(`OpenAI ${path} failed: ${res.status} ${text}`);
+      throw new Error(`OpenAI ${path} failed with ${res.status}`);
+    }
+    return (await res.json()) as T;
   }
 
-  async embed(_texts: string[]): Promise<LlmEmbedResult> {
-    this.logger.warn('OpenAI embed() not implemented until M2');
-    throw new NotImplementedException('OpenAI provider embed() lands in M2');
+  async chat(options: LlmChatOptions): Promise<LlmChatResult> {
+    const model = this.modelForTier(options.tier);
+    const json = await this.post<ChatCompletionResponse>('/chat/completions', {
+      model,
+      messages: options.messages,
+      max_tokens: options.maxOutputTokens ?? 1200,
+      temperature: options.temperature ?? 0.2,
+    });
+    return {
+      content: json.choices[0]?.message.content ?? '',
+      model,
+      inputTokens: json.usage?.prompt_tokens ?? 0,
+      outputTokens: json.usage?.completion_tokens ?? 0,
+    };
+  }
+
+  async embed(texts: string[]): Promise<LlmEmbedResult> {
+    const json = await this.post<EmbeddingResponse>('/embeddings', {
+      model: this.config.embedding,
+      input: texts,
+    });
+    return {
+      model: this.config.embedding,
+      embeddings: json.data.map((d) => d.embedding),
+      inputTokens: json.usage?.prompt_tokens ?? 0,
+    };
   }
 }

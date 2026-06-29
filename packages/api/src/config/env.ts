@@ -35,6 +35,10 @@ export const envSchema = z.object({
   CHAPA_SECRET_KEY: z.string().optional(),
   CHAPA_WEBHOOK_SECRET: z.string().optional(),
 
+  // inline = API runs the pipeline synchronously (no worker needed, great for
+  // dev); queue = API enqueues to BullMQ and the ingestion worker processes it.
+  INGESTION_MODE: z.enum(['inline', 'queue']).default('inline'),
+
   FREE_TIER_DAILY_AI_LIMIT: z.coerce.number().int().nonnegative().default(20),
   PREMIUM_TIER_DAILY_AI_LIMIT: z.coerce.number().int().nonnegative().default(300),
   RETRIEVAL_TOP_K: z.coerce.number().int().positive().default(6),
