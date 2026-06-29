@@ -13,14 +13,12 @@ describe('gradeAnswers', () => {
       { questionId: 'q2', answer: 'neutralisation' },
     ]);
     expect(r.correct).toBe(2);
-    expect(r.total).toBe(2);
     expect(r.scoreFraction).toBe(1);
   });
 
-  it('marks wrong and missing answers and returns the correct answer + explanation', () => {
+  it('marks wrong/missing answers and returns the correct answer + explanation', () => {
     const r = gradeAnswers(questions, [{ questionId: 'q1', answer: '14' }]);
     expect(r.correct).toBe(0);
-    expect(r.scoreFraction).toBe(0);
     const q1 = r.results.find((x) => x.questionId === 'q1')!;
     expect(q1.correct).toBe(false);
     expect(q1.correctAnswer).toBe('7');

@@ -25,6 +25,12 @@ export class ExamsController {
     return this.exams.practiceQuestions(query);
   }
 
+  // Download full questions (with answers) for offline mobile practice.
+  @Get('practice/download')
+  download(@Query(new ZodValidationPipe(practiceQuerySchema)) query: PracticeQueryDto) {
+    return this.exams.downloadQuestions(query);
+  }
+
   @Post('practice/submit')
   submitPractice(
     @CurrentUser() user: AuthenticatedUser,
