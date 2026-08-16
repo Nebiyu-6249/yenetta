@@ -7,6 +7,11 @@ export default [
     ignores: ['.next/**', 'next-env.d.ts'],
   },
   {
+    // Node-run config files may use Node globals.
+    files: ['*.mjs', '*.config.mjs'],
+    languageOptions: { globals: { process: 'readonly' } },
+  },
+  {
     files: ['**/*.{ts,tsx}'],
     plugins: {
       'react-hooks': reactHooks,
