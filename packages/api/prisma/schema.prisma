@@ -86,6 +86,10 @@ model User {
   stream    Stream?
   locale    Locale   @default(en)
   role      UserRole @default(student)
+  // TOTP multi-factor auth (required for admins). Secret is stored encrypted
+  // at rest; mfaEnabled flips true only after an enrollment code is confirmed.
+  mfaSecret  String?
+  mfaEnabled Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

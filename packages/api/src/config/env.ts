@@ -25,6 +25,12 @@ export const envSchema = z.object({
   OTP_TTL_SECONDS: z.coerce.number().int().positive().default(300),
   OTP_RATE_LIMIT_PER_HOUR: z.coerce.number().int().positive().default(5),
 
+  // TOTP multi-factor auth for admins. MFA_ENCRYPTION_KEY encrypts stored
+  // secrets at rest (falls back to deriving from the JWT secrets if unset);
+  // MFA_ISSUER labels the authenticator entry.
+  MFA_ENCRYPTION_KEY: z.string().optional(),
+  MFA_ISSUER: z.string().default('Yenetta'),
+
   LLM_PROVIDER: z.enum(['openai', 'stub']).default('openai'),
   OPENAI_API_KEY: z.string().optional(),
   LLM_MODEL_CHEAP: z.string().default('gpt-4o-mini'),

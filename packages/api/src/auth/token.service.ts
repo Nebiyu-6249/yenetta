@@ -48,6 +48,31 @@ export class TokenService {
     return { accessToken, refreshToken };
   }
 
+  /**
+   * Short-lived token issued after the first factor (phone+OTP) passes but MFA
+   * is still outstanding. It authorises only the `/auth/mfa/verify` step, never
+   * API access, so a stolen challenge cannot reach protected routes.
+   */
+  async issueMfaChallengeToken(userId: string): Promise<string> {
+    return this.jwt.signAsync(
+      { sub: userId, type: 'mfa' },
+      { secret: this.env.JWT_ACCESS_SECRET, expiresIn: '5m' },
+    );
+  }
+
+  async verifyMfaChallengeToken(token: string): Promise<string> {
+    let payload: { sub: string; type?: string };
+    try {
+      payload = await this.jwt.verifyAsync(token, { secret: this.env.JWT_ACCESS_SECRET });
+    } catch {
+      throw new UnauthorizedException('Invalid or expired MFA challenge');
+    }
+    if (payload.type !== 'mfa') {
+      throw new UnauthorizedException('Wrong token type');
+    }
+    return payload.sub;
+  }
+
   async verifyAccessToken(token: string): Promise<AccessTokenPayload> {
     const payload = await this.jwt.verifyAsync<AccessTokenPayload>(token, {
       secret: this.env.JWT_ACCESS_SECRET,
