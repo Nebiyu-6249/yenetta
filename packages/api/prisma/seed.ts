@@ -259,6 +259,17 @@ async function main(): Promise<void> {
   }
   console.log(`  • ${QUOTAS.length} quota rows`);
 
+  // Promote a configured phone to admin so the admin console/RBAC is usable.
+  const adminPhone = process.env.ADMIN_PHONE?.trim();
+  if (adminPhone) {
+    await prisma.user.upsert({
+      where: { phone: adminPhone },
+      create: { phone: adminPhone, role: 'admin' },
+      update: { role: 'admin' },
+    });
+    console.log(`  • admin user ${adminPhone}`);
+  }
+
   console.log('Seed complete.');
 }
 

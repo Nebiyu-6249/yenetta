@@ -196,8 +196,11 @@ dedicated CI step, and the pre-commit hook. `[built]`
 
 - Internal Admin Console (Yenetta staff): content/user/org/pricing/usage/QA/
   security management behind admin RBAC + MFA + optional IP allowlist + full
-  audit logging. Its own milestone. `[new]` (only a minimal content-upload page
-  exists today).
+  audit logging. `[partial]` - admin RBAC is `[built]`: a `role` on users +
+  `@Roles('admin')` + RolesGuard now gate the content-pipeline endpoints and the
+  admin audit-log read endpoint (verified live: student -> 403, admin -> 200);
+  students upload their own PRIVATE notes via `POST /me/documents`. MFA, IP
+  allowlist, and the full console UI are still `[new]`.
 - School Admin Console (enterprise): scoped to one org - roster upload, seat
   status, aggregate usage; tenant-isolated, least privilege, cannot see other
   tenants or individual student chat beyond policy. `[new]`.
