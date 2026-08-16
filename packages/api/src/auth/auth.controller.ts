@@ -1,4 +1,5 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Ip, Post } from '@nestjs/common';
+import { AuditService } from '../audit/audit.service';
 import { Public } from '../common/public.decorator';
 import { RateLimit } from '../common/rate-limit.decorator';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
@@ -15,7 +16,10 @@ import { type OtpRequestResult } from './otp.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    private readonly audit: AuditService,
+  ) {}
 
   @Public()
   @RateLimit({ limit: 5, windowMs: 60_000 })
@@ -31,8 +35,18 @@ export class AuthController {
   @RateLimit({ limit: 10, windowMs: 60_000 })
   @Post('otp/verify')
   @HttpCode(HttpStatus.OK)
-  verifyOtp(@Body(new ZodValidationPipe(verifyOtpSchema)) dto: VerifyOtpDto): Promise<LoginResult> {
-    return this.auth.verifyAndLogin(dto.phone, dto.code);
+  async verifyOtp(
+    @Body(new ZodValidationPipe(verifyOtpSchema)) dto: VerifyOtpDto,
+    @Ip() ip: string,
+  ): Promise<LoginResult> {
+    const result = await this.auth.verifyAndLogin(dto.phone, dto.code);
+    await this.audit.record({
+      action: 'auth.login',
+      actorUserId: result.user.id,
+      ip,
+      metadata: { tier: result.entitlement.tier },
+    });
+    return result;
   }
 
   @Public()

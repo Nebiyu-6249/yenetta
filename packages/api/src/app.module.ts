@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RateLimitGuard } from './common/rate-limit.guard';
@@ -30,6 +31,7 @@ import { UsersModule } from './users/users.module';
   imports: [
     AppConfigModule,
     PrismaModule,
+    AuditModule,
     ProvidersModule,
     AuthModule,
     UsersModule,

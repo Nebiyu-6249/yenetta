@@ -302,6 +302,25 @@ model Quota {
   @@map("quotas")
 }
 
+/// Append-only security/admin audit log (SECURITY.md section 9). Records who did
+/// what, from where - never secrets or user content. Personal-data domain;
+/// `actorUserId` references a User by id only (no FK).
+model AuditEvent {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  action      String
+  targetType  String?
+  targetId    String?
+  ip          String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([action, createdAt])
+  @@index([actorUserId, createdAt])
+  @@map("audit_events")
+}
+
 // ───────────────────── Phase 2: plans, memory, gamification ─────────────────
 
 model StudyPlan {
