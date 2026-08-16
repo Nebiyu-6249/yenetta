@@ -1,5 +1,6 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { Public } from '../common/public.decorator';
+import { RateLimit } from '../common/rate-limit.decorator';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { AuthService, type LoginResult } from './auth.service';
 import {
@@ -17,6 +18,7 @@ export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
   @Public()
+  @RateLimit({ limit: 5, windowMs: 60_000 })
   @Post('otp/request')
   @HttpCode(HttpStatus.OK)
   requestOtp(
@@ -26,6 +28,7 @@ export class AuthController {
   }
 
   @Public()
+  @RateLimit({ limit: 10, windowMs: 60_000 })
   @Post('otp/verify')
   @HttpCode(HttpStatus.OK)
   verifyOtp(@Body(new ZodValidationPipe(verifyOtpSchema)) dto: VerifyOtpDto): Promise<LoginResult> {
@@ -33,6 +36,7 @@ export class AuthController {
   }
 
   @Public()
+  @RateLimit({ limit: 30, windowMs: 60_000 })
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   refresh(
