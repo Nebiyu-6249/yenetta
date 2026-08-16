@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  Ip,
   Param,
   Post,
   UploadedFile as UploadedFileDecorator,
@@ -10,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { type IngestionOverrides } from '@yenetta/ingestion';
+import { AuditService } from '../audit/audit.service';
 import { CurrentUser, type AuthenticatedUser } from '../common/current-user.decorator';
 import { ContentService } from './content.service';
 import { MAX_UPLOAD_BYTES } from './upload-validation';
@@ -18,13 +20,17 @@ import { MAX_UPLOAD_BYTES } from './upload-validation';
 // (an `isAdmin`/roles check) is layered on in a later milestone.
 @Controller('admin/documents')
 export class AdminController {
-  constructor(private readonly content: ContentService) {}
+  constructor(
+    private readonly content: ContentService,
+    private readonly audit: AuditService,
+  ) {}
 
   @Post()
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_BYTES } }))
   async upload(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFileDecorator() file: Express.Multer.File | undefined,
+    @Ip() ip: string,
     @Body()
     body: {
       subjectId?: string;
@@ -49,6 +55,14 @@ export class AdminController {
       user.userId,
       overrides,
     );
+    await this.audit.record({
+      action: 'content.upload',
+      actorUserId: user.userId,
+      targetType: 'document',
+      targetId: doc.id,
+      ip,
+      metadata: { visibility: doc.visibility, type: doc.type, status: doc.status },
+    });
     return { id: doc.id, filename: doc.filename, status: doc.status };
   }
 

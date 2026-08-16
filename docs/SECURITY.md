@@ -116,7 +116,11 @@ dedicated CI step, and the pre-commit hook. `[built]`
 ## 9. Logging, monitoring, config hardening
 
 - Tamper-evident audit log of security events + all admin actions; anomaly
-  alerts; never log secrets/PII. `[new]`.
+  alerts; never log secrets/PII. `[partial]` - an append-only `audit_events`
+  table + AuditService records login, document uploads, and payment/voucher
+  grants with actor id + IP + safe metadata (no phone/tokens/content). Verified
+  live. Broader action coverage, hash-chained tamper-evidence, anomaly alerting,
+  and an admin read endpoint (behind RBAC) are still `[new]`.
 - Disable directory listing; remove sample/admin default routes. `[partial]`
   (no directory listing in Nest/Next; gate the admin upload route behind RBAC).
 - Trim prod API responses - no stack traces/internal fields. `[built]` -

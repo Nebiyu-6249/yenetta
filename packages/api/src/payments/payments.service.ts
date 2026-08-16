@@ -7,6 +7,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   PAYMENT_PROVIDER,
@@ -34,6 +35,7 @@ export class PaymentsService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(PAYMENT_PROVIDER) private readonly provider: PaymentProvider,
+    private readonly audit: AuditService,
   ) {}
 
   /** Starts a Premium purchase: records a pending payment and returns a URL. */
@@ -100,6 +102,13 @@ export class PaymentsService {
         data: { status: 'success', rawWebhook: parsed as unknown as object },
       });
       await this.activatePremium(payment.userId);
+      await this.audit.record({
+        action: 'payment.succeeded',
+        actorUserId: payment.userId,
+        targetType: 'payment',
+        targetId: payment.id,
+        metadata: { amount: expectedAmount, currency: payment.currency },
+      });
       this.logger.log(`Premium activated for ${payment.userId} (${parsed.providerTxId})`);
       return { ok: true, status: 'success' };
     }
@@ -136,6 +145,7 @@ export class PaymentsService {
       throw new BadRequestException('Invalid or expired voucher code');
     }
     await this.activatePremium(userId);
+    await this.audit.record({ action: 'voucher.redeemed', actorUserId: userId });
     return { ok: true };
   }
 
