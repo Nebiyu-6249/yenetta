@@ -13,7 +13,13 @@ export class ChatController {
     @CurrentUser() user: AuthenticatedUser,
     @Body(new ZodValidationPipe(chatRequestSchema)) dto: ChatRequestDto,
   ): Promise<ChatResult> {
-    return this.chat.chat(user.userId, dto.message, dto.scope ?? {}, dto.conversationId, dto.language);
+    return this.chat.chat(
+      user.userId,
+      dto.message,
+      dto.scope ?? {},
+      dto.conversationId,
+      dto.language,
+    );
   }
 
   @Get('conversations')

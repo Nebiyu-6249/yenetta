@@ -45,7 +45,7 @@ export function LoginScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.flame}>
-        <Text style={styles.flameEmoji}>🔥</Text>
+        <Text style={styles.flameEmoji}>Y</Text>
       </View>
       <Heading>Yenetta</Heading>
       <Muted>AI study companion for Ethiopian students</Muted>

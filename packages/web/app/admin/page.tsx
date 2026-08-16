@@ -79,8 +79,8 @@ export default function AdminPage() {
   return (
     <main className="mx-auto min-h-screen max-w-3xl bg-paper px-6 py-12">
       <header className="mb-8 flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-flame text-xl">
-          🔥
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-flame font-heading font-bold text-white">
+          Y
         </div>
         <div>
           <h1 className="font-heading text-2xl font-bold text-ink">Yenetta · Content Pipeline</h1>

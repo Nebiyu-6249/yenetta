@@ -5,7 +5,7 @@ committed before pausing for human review (see `docs/BUILD_BRIEF.md` §0).
 
 ---
 
-## ✅ M7 — Phase 2 (memory, plans, analytics, gamification, Amharic) — _complete (2026-06-29)_
+## M7 — Phase 2 (memory, plans, analytics, gamification, Amharic) — _complete (2026-06-29)_
 
 ### What was done
 
@@ -39,12 +39,12 @@ Verified end-to-end against the live database:
 
 | Check | Result |
 | --- | --- |
-| Study plan generated from an exam date | ✅ 7 scheduled items across days; weak chapters first |
-| Plan adapts to performance | ✅ `adapt` re-prioritizes remaining items by current mastery |
-| Sessions resume with memory | ✅ learning profile (“still working on: Acids, Bases and Salts”) injected into the grounded prompt |
-| Toggling Amharic switches UI strings + Amharic explanations | ✅ shared `t('am', …)` strings; grounded chat with `language='am'` carries an Amharic instruction (web EN/አማ toggle) |
-| Premium gating applied | ✅ plans & study guides 402 for free, 200/201 for premium |
-| Streaks / XP / leaderboard | ✅ XP awarded per activity (practice +15, chat +2), streak, opt-in leaderboard |
+| Study plan generated from an exam date | 7 scheduled items across days; weak chapters first |
+| Plan adapts to performance | `adapt` re-prioritizes remaining items by current mastery |
+| Sessions resume with memory | learning profile (“still working on: Acids, Bases and Salts”) injected into the grounded prompt |
+| Toggling Amharic switches UI strings + Amharic explanations | shared `t('am', …)` strings; grounded chat with `language='am'` carries an Amharic instruction (web EN/አማ toggle) |
+| Premium gating applied | plans & study guides 402 for free, 200/201 for premium |
+| Streaks / XP / leaderboard | XP awarded per activity (practice +15, chat +2), streak, opt-in leaderboard |
 
 `pnpm lint`, `pnpm typecheck`, `pnpm test` (77 tests) all pass; `next build` OK.
 
@@ -69,7 +69,7 @@ plans / analytics / gamification / Amharic.
 
 ---
 
-## ✅ M6 — Payments & entitlements end-to-end — _complete (2026-06-29)_
+## M6 — Payments & entitlements end-to-end — _complete (2026-06-29)_
 
 ### What was done
 
@@ -105,13 +105,13 @@ Verified end-to-end against the live database:
 
 | Check | Result |
 | --- | --- |
-| Buy Premium (sandbox) → unlock | ✅ checkout → **signed webhook** → tier `premium`, daily AI limit 20 → 300 |
-| Premium features unlock | ✅ premium-gated mock exam: 402 (free) → 201 (premium) |
-| Simulate expiry → auto-downgrade (progress retained) | ✅ expired subscription → tier `free`, mock 402 again; data intact |
-| Quota enforcement | ✅ free 20 / premium 300 resolved from the live subscription |
-| Webhook idempotency | ✅ re-delivery returns `idempotent`; exactly one subscription row |
-| Invalid signature rejected | ✅ HTTP 401 |
-| Signed offline entitlement token | ✅ JWT issued (tier + 7-day expiry) for mobile caching |
+| Buy Premium (sandbox) → unlock | checkout → **signed webhook** → tier `premium`, daily AI limit 20 → 300 |
+| Premium features unlock | premium-gated mock exam: 402 (free) → 201 (premium) |
+| Simulate expiry → auto-downgrade (progress retained) | expired subscription → tier `free`, mock 402 again; data intact |
+| Quota enforcement | free 20 / premium 300 resolved from the live subscription |
+| Webhook idempotency | re-delivery returns `idempotent`; exactly one subscription row |
+| Invalid signature rejected | HTTP 401 |
+| Signed offline entitlement token | JWT issued (tier + 7-day expiry) for mobile caching |
 
 `pnpm lint`, `pnpm typecheck`, `pnpm test` (71 tests) all pass.
 
@@ -142,7 +142,7 @@ Verified end-to-end against the live database:
 
 ---
 
-## ✅ M5 — Android app (Expo, offline-first) — _complete (2026-06-29)_
+## M5 — Android app (Expo, offline-first) — _complete (2026-06-29)_
 
 ### What was done
 
@@ -175,11 +175,11 @@ Verified end-to-end against the live database:
 
 | Check | Result |
 | --- | --- |
-| Offline study works with no network | ✅ unit-tested: cached chapter → flashcard SR review reschedules offline |
-| Cached past-paper practice offline | ✅ unit-tested: download → grade locally → queue attempt (no network) |
-| Reconnect → progress syncs | ✅ unit-tested: `SyncService.flush` posts queued attempts; queue preserved while offline |
-| Core flows (auth, chat, study, practice, paywall) | ✅ implemented as RN screens; typecheck passes |
-| Lint / typecheck / tests | ✅ `pnpm lint`, `pnpm typecheck`, `pnpm test` (64) all pass |
+| Offline study works with no network | unit-tested: cached chapter → flashcard SR review reschedules offline |
+| Cached past-paper practice offline | unit-tested: download → grade locally → queue attempt (no network) |
+| Reconnect → progress syncs | unit-tested: `SyncService.flush` posts queued attempts; queue preserved while offline |
+| Core flows (auth, chat, study, practice, paywall) | implemented as RN screens; typecheck passes |
+| Lint / typecheck / tests | `pnpm lint`, `pnpm typecheck`, `pnpm test` (64) all pass |
 
 > The offline engine (download, on-device SR, on-device grading, reconnect sync)
 > is verified by unit tests against the in-memory store; `SqliteOfflineStore`
@@ -213,7 +213,7 @@ Verified end-to-end against the live database:
 
 ---
 
-## ✅ M4 — Website (Next.js) — _complete (2026-06-29)_
+## M4 — Website (Next.js) — _complete (2026-06-29)_
 
 ### What was done
 
@@ -244,10 +244,10 @@ Verified end-to-end against the live database:
 
 | Check | Result |
 | --- | --- |
-| Production build of the whole site | ✅ `next build` — all 14 routes; marketing pages static |
-| Marketing SSR + SEO | ✅ `<title>`, meta description, hero copy render server-side; `robots.txt` + `sitemap.xml` 200 |
-| Full journey wired | ✅ sign up → chat → study a chapter → practice a paper → paywall (client routes build + target the verified API) |
-| Lint / typecheck / tests | ✅ `pnpm lint`, `pnpm typecheck`, `pnpm test` (58) all pass |
+| Production build of the whole site | `next build` — all 14 routes; marketing pages static |
+| Marketing SSR + SEO | `<title>`, meta description, hero copy render server-side; `robots.txt` + `sitemap.xml` 200 |
+| Full journey wired | sign up → chat → study a chapter → practice a paper → paywall (client routes build + target the verified API) |
+| Lint / typecheck / tests | `pnpm lint`, `pnpm typecheck`, `pnpm test` (58) all pass |
 
 > The marketing SSR/SEO and the production build of every app route were verified
 > here; the click-through journey runs against the M1–M3 API that this typed
@@ -279,7 +279,7 @@ Verified end-to-end against the live database:
 
 ---
 
-## ✅ M3 — Study & exam features — _complete (2026-06-29)_
+## M3 — Study & exam features — _complete (2026-06-29)_
 
 ### What was done
 
@@ -318,12 +318,12 @@ Verified end-to-end against the live database:
 
 | Check | Result |
 | --- | --- |
-| Generate summary/notes/flashcards/quiz for a chapter | ✅ all four generated from chapter text |
-| Second call served from cache | ✅ summary `cached:false` then `cached:true` |
-| Take a past-paper practice | ✅ `/exams/practice` → submit → 2/2 with explanations ($0 AI) |
-| Take a timed mock exam | ✅ start (1800s, attempt id) → submit (duration recorded) → 2/2 |
-| Quiz + spaced repetition | ✅ quiz 1/1; SR due card → review → next interval scheduled |
-| Progress updates and persists | ✅ mastery tracked per chapter across activities |
+| Generate summary/notes/flashcards/quiz for a chapter | all four generated from chapter text |
+| Second call served from cache | summary `cached:false` then `cached:true` |
+| Take a past-paper practice | `/exams/practice` → submit → 2/2 with explanations ($0 AI) |
+| Take a timed mock exam | start (1800s, attempt id) → submit (duration recorded) → 2/2 |
+| Quiz + spaced repetition | quiz 1/1; SR due card → review → next interval scheduled |
+| Progress updates and persists | mastery tracked per chapter across activities |
 
 `pnpm lint`, `pnpm typecheck`, `pnpm test` (58 tests) all pass.
 
@@ -354,7 +354,7 @@ Verified end-to-end against the live database:
 
 ---
 
-## ✅ M2 — Content pipeline + RAG + grounded chat — _complete (2026-06-29)_
+## M2 — Content pipeline + RAG + grounded chat — _complete (2026-06-29)_
 
 ### What was done
 
@@ -400,11 +400,11 @@ Verified end-to-end against **live Postgres 16 + pgvector + Redis**:
 
 | Check | Result |
 | --- | --- |
-| Ask about a seeded chapter → grounded answer **with sources** | ✅ "cell organelles/photosynthesis" → grounded, source = _Cell Biology_ |
-| Ask outside the corpus → honest fallback (no hallucination) | ✅ "2022 World Cup" → "not in the curriculum yet", no sources, no LLM call |
-| Admin uploads a doc → ingests → retrievable | ✅ inline AND **queue/worker** (`uploaded → embedded`, "job 1 completed"); new content answerable |
-| `usage_events` logged with cost estimates | ✅ rows per call (feature/model/tokens/cost); `gpt-4o-mini` row = $0.00042 |
-| Caching of shared outputs | ✅ identical question: call 1 `cached:false`, call 2 `cached:true` |
+| Ask about a seeded chapter → grounded answer **with sources** | "cell organelles/photosynthesis" → grounded, source = _Cell Biology_ |
+| Ask outside the corpus → honest fallback (no hallucination) | "2022 World Cup" → "not in the curriculum yet", no sources, no LLM call |
+| Admin uploads a doc → ingests → retrievable | inline AND **queue/worker** (`uploaded → embedded`, "job 1 completed"); new content answerable |
+| `usage_events` logged with cost estimates | rows per call (feature/model/tokens/cost); `gpt-4o-mini` row = $0.00042 |
+| Caching of shared outputs | identical question: call 1 `cached:false`, call 2 `cached:true` |
 
 `pnpm lint`, `pnpm typecheck`, `pnpm test` (44 tests) all pass.
 
@@ -440,7 +440,7 @@ Verified end-to-end against **live Postgres 16 + pgvector + Redis**:
 
 ---
 
-## ✅ M1 — Backend core — _complete (2026-06-29)_
+## M1 — Backend core — _complete (2026-06-29)_
 
 ### What was done
 
@@ -482,11 +482,11 @@ Verified end-to-end against a **live Postgres 16 + pgvector** (migrated + seeded
 
 | Check | Result |
 | --- | --- |
-| Register/login via OTP (dev code in response + logs) | ✅ `otp/request` returns `devCode`; `otp/verify` returns user + entitlement + tokens |
-| Seeded subjects/chapters queryable via API | ✅ `GET /subjects`, `?grade=12` filter, `/subjects/:id/chapters` all return seeded rows |
-| Auth-protected route works | ✅ `/users/me` → 401 without token, 200 with valid token |
-| Unit tests for auth + entitlements pass | ✅ 20/20 (26 across the monorepo) |
-| Extras demonstrated | ✅ OTP rate-limit (6th req → 429), bad input → 400, profile persists, refresh rotation + old-token revocation (→ 401) |
+| Register/login via OTP (dev code in response + logs) | `otp/request` returns `devCode`; `otp/verify` returns user + entitlement + tokens |
+| Seeded subjects/chapters queryable via API | `GET /subjects`, `?grade=12` filter, `/subjects/:id/chapters` all return seeded rows |
+| Auth-protected route works | `/users/me` → 401 without token, 200 with valid token |
+| Unit tests for auth + entitlements pass | 20/20 (26 across the monorepo) |
+| Extras demonstrated | OTP rate-limit (6th req → 429), bad input → 400, profile persists, refresh rotation + old-token revocation (→ 401) |
 
 `pnpm lint`, `pnpm typecheck`, `pnpm test` all pass.
 
@@ -526,7 +526,7 @@ Verified end-to-end against a **live Postgres 16 + pgvector** (migrated + seeded
 
 ---
 
-## ✅ M0 — Scaffold & tooling — _complete (2026-06-29)_
+## M0 — Scaffold & tooling — _complete (2026-06-29)_
 
 ### What was done
 
@@ -564,11 +564,11 @@ Verified end-to-end against a **live Postgres 16 + pgvector** (migrated + seeded
 
 | Check | Result |
 | --- | --- |
-| `docker compose config` valid (pgvector + Redis) | ✅ valid (`docker compose up` works on Docker Desktop) |
-| `pnpm lint` | ✅ pass (0 errors, 0 warnings) |
-| `pnpm typecheck` | ✅ pass (all 5 packages, incl. Next.js + Expo) |
-| `pnpm test` | ✅ pass (7 tests across 5 packages) |
-| Hello-world screens read the brand theme | ✅ web + mobile render wordmark/colors from `@yenetta/shared` |
+| `docker compose config` valid (pgvector + Redis) | valid (`docker compose up` works on Docker Desktop) |
+| `pnpm lint` | pass (0 errors, 0 warnings) |
+| `pnpm typecheck` | pass (all 5 packages, incl. Next.js + Expo) |
+| `pnpm test` | pass (7 tests across 5 packages) |
+| Hello-world screens read the brand theme | web + mobile render wordmark/colors from `@yenetta/shared` |
 
 > Note: the Docker daemon is not available in the build CI sandbox, so the
 > containers were validated via `docker compose config` rather than a live
@@ -590,7 +590,7 @@ Verified end-to-end against a **live Postgres 16 + pgvector** (migrated + seeded
 
 ### Assumptions
 
-- Real logo image files are not in the repo yet; the UI falls back to a 🔥
+- Real logo image files are not in the repo yet; the UI falls back to a 
   emoji + "Yenetta AI" text. Placeholder READMEs document where to drop the
   provided assets (`packages/web/public/brand/`, `apps/mobile/assets/brand/`).
 - `docs/BUILD_BRIEF.md` captures the operating instructions, brand, stack, and

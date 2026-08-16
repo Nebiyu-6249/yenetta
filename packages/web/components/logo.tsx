@@ -1,14 +1,14 @@
 import { APP_WORDMARK } from '@yenetta/shared';
 
 export function Flame({ className = '' }: { className?: string }) {
-  // The flame mark — stands in for the brand icon/favicon until the SVG asset
-  // is dropped into public/brand/.
+  // Brand mark placeholder: a "Y" monogram on the flame gradient. Replace with
+  // the real logo SVG in public/brand/ (no emoji fallbacks, per project rule).
   return (
     <span
-      className={`inline-flex items-center justify-center rounded-xl bg-flame ${className}`}
+      className={`inline-flex items-center justify-center rounded-xl bg-flame font-heading font-bold text-white ${className}`}
       aria-hidden
     >
-      🔥
+      Y
     </span>
   );
 }

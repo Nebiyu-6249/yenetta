@@ -28,7 +28,7 @@ export default function DashboardPage() {
   return (
     <div>
       <h1 className="font-heading text-2xl font-bold text-ink">
-        Welcome{user?.name ? `, ${user.name}` : ''} 👋
+        Welcome{user?.name ? `, ${user.name}` : ''}
       </h1>
       <p className="mt-1 font-body text-sm text-muted">
         {entitlement?.tier === 'premium' ? 'Premium plan' : 'Free plan'} · Track your mastery here.
@@ -82,9 +82,7 @@ export default function DashboardPage() {
             <h2 className="mb-3 font-heading text-lg font-semibold text-ink">Focus areas</h2>
             {progress.weakAreas.length === 0 ? (
               <Card>
-                <p className="font-body text-sm text-muted">
-                  No weak areas detected — keep it up! 🎉
-                </p>
+                <p className="font-body text-sm text-muted">No weak areas detected — keep it up!</p>
               </Card>
             ) : (
               <div className="space-y-2">

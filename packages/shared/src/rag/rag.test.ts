@@ -66,7 +66,14 @@ describe('buildGroundedPrompt', () => {
   it('adds an Amharic instruction and student context when requested', () => {
     const msgs = buildGroundedPrompt(
       'What is a cell?',
-      [{ text: 'A cell is the basic unit of life.', chapterTitle: 'Cell Biology', type: 'curriculum', year: null }],
+      [
+        {
+          text: 'A cell is the basic unit of life.',
+          chapterTitle: 'Cell Biology',
+          type: 'curriculum',
+          year: null,
+        },
+      ],
       { language: 'am', studentContext: 'still working on Cell Biology' },
     );
     expect(msgs[0]!.content).toContain('አማርኛ');

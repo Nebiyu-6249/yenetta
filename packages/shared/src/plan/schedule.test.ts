@@ -41,7 +41,10 @@ describe('gamification', () => {
   it('increments a streak on consecutive days and resets after a gap', () => {
     const d = (s: string) => new Date(`${s}T08:00:00Z`);
     expect(updateStreak(null, 0, d('2026-01-01')).streakDays).toBe(1);
-    expect(updateStreak(d('2026-01-01'), 1, d('2026-01-02'))).toEqual({ streakDays: 2, isNewDay: true });
+    expect(updateStreak(d('2026-01-01'), 1, d('2026-01-02'))).toEqual({
+      streakDays: 2,
+      isNewDay: true,
+    });
     expect(updateStreak(d('2026-01-01'), 3, d('2026-01-01')).isNewDay).toBe(false);
     expect(updateStreak(d('2026-01-01'), 5, d('2026-01-05')).streakDays).toBe(1);
   });

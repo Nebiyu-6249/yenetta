@@ -10,6 +10,6 @@ export class MockSmsProvider implements SmsProvider {
   private readonly logger = new Logger('MockSms');
 
   async sendOtp(phone: string, code: string): Promise<void> {
-    this.logger.log(`📱 OTP for ${phone}: ${code} (mock SMS — dev only)`);
+    this.logger.log(`OTP for ${phone}: ${code} (mock SMS — dev only)`);
   }
 }

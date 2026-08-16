@@ -47,7 +47,7 @@ export function ProfileScreen() {
     setMessage(null);
     try {
       await api.redeemVoucher(voucher);
-      setMessage('🎉 Premium unlocked! Reopen the app to refresh.');
+      setMessage('Premium unlocked! Reopen the app to refresh.');
     } catch {
       setMessage('Invalid or expired voucher.');
     } finally {
@@ -80,7 +80,11 @@ export function ProfileScreen() {
               ))}
             </View>
             <View style={{ marginTop: 14, gap: 10 }}>
-              <Button label={busy ? 'Starting…' : 'Pay with Chapa'} onPress={checkout} disabled={busy || !online} />
+              <Button
+                label={busy ? 'Starting…' : 'Pay with Chapa'}
+                onPress={checkout}
+                disabled={busy || !online}
+              />
               <View style={styles.voucherRow}>
                 <TextInput
                   value={voucher}
@@ -88,7 +92,12 @@ export function ProfileScreen() {
                   placeholder="Voucher code"
                   style={styles.input}
                 />
-                <Button label="Redeem" variant="secondary" onPress={redeem} disabled={busy || !online || !voucher} />
+                <Button
+                  label="Redeem"
+                  variant="secondary"
+                  onPress={redeem}
+                  disabled={busy || !online || !voucher}
+                />
               </View>
             </View>
             {message ? <Muted>{message}</Muted> : null}
@@ -107,5 +116,13 @@ const styles = StyleSheet.create({
   upgrade: { fontSize: 18, fontWeight: '700', color: theme.colors.ink },
   feature: { fontSize: 14, color: theme.colors.ink },
   voucherRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  input: { flex: 1, borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.md, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: theme.colors.white },
+  input: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: theme.colors.white,
+  },
 });

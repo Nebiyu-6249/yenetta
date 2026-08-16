@@ -32,6 +32,9 @@ jobs:
       - name: Build shared packages
         run: pnpm build --filter=@yenetta/shared
 
+      - name: No-emoji rule
+        run: pnpm check:emoji
+
       - name: Lint
         run: pnpm lint
 

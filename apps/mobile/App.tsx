@@ -15,10 +15,10 @@ import { theme } from './src/theme';
 type TabKey = 'tutor' | 'study' | 'practice' | 'profile';
 
 const TABS: { key: TabKey; label: string; icon: string }[] = [
-  { key: 'tutor', label: 'Tutor', icon: '💬' },
-  { key: 'study', label: 'Study', icon: '📚' },
-  { key: 'practice', label: 'Practice', icon: '📝' },
-  { key: 'profile', label: 'Profile', icon: '👤' },
+  { key: 'tutor', label: 'Tutor', icon: '' },
+  { key: 'study', label: 'Study', icon: '' },
+  { key: 'practice', label: 'Practice', icon: '' },
+  { key: 'profile', label: 'Profile', icon: '' },
 ];
 
 function Tabs() {
@@ -40,7 +40,6 @@ function Tabs() {
       <View style={styles.tabBar}>
         {TABS.map((t) => (
           <Pressable key={t.key} style={styles.tab} onPress={() => setTab(t.key)}>
-            <Text style={styles.tabIcon}>{t.icon}</Text>
             <Text style={[styles.tabLabel, tab === t.key && styles.tabActive]}>{t.label}</Text>
           </Pressable>
         ))}

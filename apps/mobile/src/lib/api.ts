@@ -123,7 +123,10 @@ export const api = {
   progress: () => request<{ progress: { chapterId: string; mastery: number }[] }>('/progress'),
 
   checkout: () =>
-    request<{ checkoutUrl: string; txRef: string }>('/payments/checkout', { method: 'POST', body: {} }),
+    request<{ checkoutUrl: string; txRef: string }>('/payments/checkout', {
+      method: 'POST',
+      body: {},
+    }),
   redeemVoucher: (code: string) =>
     request<{ ok: boolean }>('/payments/voucher', { method: 'POST', body: { code } }),
   entitlementToken: () =>

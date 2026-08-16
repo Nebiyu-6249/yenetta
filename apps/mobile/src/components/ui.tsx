@@ -63,9 +63,7 @@ export function Loading({ label }: { label?: string }) {
 export function OfflineBanner() {
   return (
     <View style={styles.offline}>
-      <Text style={styles.offlineText}>
-        ✈️ Offline — using downloaded content. Changes will sync.
-      </Text>
+      <Text style={styles.offlineText}>Offline — using downloaded content. Changes will sync.</Text>
     </View>
   );
 }
