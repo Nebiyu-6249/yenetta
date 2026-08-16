@@ -74,9 +74,15 @@ export class ChatService {
       };
     }
 
-    // 3. Scoped retrieval, then keep only chunks that genuinely support the
+    // 3. Scoped retrieval (owner-isolated: public content + this user's own
+    //    private uploads only), then keep the chunks that genuinely support the
     //    question: above an absolute floor AND close to the best match.
-    const retrieved = await this.retrieval.retrieve(message, scope, this.env.RETRIEVAL_TOP_K);
+    const retrieved = await this.retrieval.retrieve(
+      message,
+      scope,
+      this.env.RETRIEVAL_TOP_K,
+      userId,
+    );
     const topSimilarity = retrieved[0]?.similarity ?? 0;
     const threshold = Math.max(
       MIN_SUPPORTING_SIMILARITY,
@@ -124,7 +130,12 @@ export class ChatService {
       inputTokens: result.inputTokens,
       outputTokens: result.outputTokens,
     });
-    this.cache.set(cacheKey, { answer: result.content, sources });
+    // Never write a private-content answer to the SHARED cache (it is not keyed
+    // by user) - that would leak one student's upload into another's answer.
+    const usedPrivate = supporting.some((c) => c.visibility === 'private');
+    if (!usedPrivate) {
+      this.cache.set(cacheKey, { answer: result.content, sources });
+    }
     void this.stats.award(userId, 'chat');
 
     return {

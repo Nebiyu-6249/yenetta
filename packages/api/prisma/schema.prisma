@@ -407,6 +407,7 @@ model ContentDocument {
   uploaderId String? // references a personal User by id only (no FK)
   filename   String
   type       ContentType    @default(curriculum)
+  visibility String         @default("public") // public (admin curriculum) | private (student upload)
   status     DocumentStatus @default(uploaded)
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
@@ -430,6 +431,10 @@ model ContentChunk {
   year             Int?
   difficulty       Int?
   sourceDocumentId String?
+  // Upload isolation (LLM04/LLM08): private chunks are scoped to their owner
+  // and can never be retrieved into another user's answers.
+  ownerId          String?
+  visibility       String                 @default("public") // public | private
   createdAt        DateTime               @default(now())
 
   subject  Subject?         @relation(fields: [subjectId], references: [id], onDelete: SetNull)
@@ -438,6 +443,7 @@ model ContentChunk {
 
   @@index([subjectId, chapterId])
   @@index([type, year])
+  @@index([visibility, ownerId])
   @@map("content_chunks")
 }
 

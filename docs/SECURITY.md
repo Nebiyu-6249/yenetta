@@ -59,10 +59,13 @@ dedicated CI step, and the pre-commit hook. `[built]`
 ## 4. File uploads
 
 - Whitelist types (pdf, txt, md, common images) and verify by content
-  (magic bytes), not just extension. `[new]`.
+  (magic bytes), not just extension. `[built]` - `validateUpload` checks the
+  extension whitelist AND the file's magic bytes; a fake `.pdf` or `.exe` is
+  rejected (415). Verified live.
 - Cap file size; store outside webroot; never serve as executable; type/AV
-  scan. `[new]` (uploads are held in memory and parsed, never written to a
-  served path; add size cap + magic-byte check + AV hook).
+  scan. `[built]` (size cap at 15MB via multer + validateUpload; uploads are
+  held in memory and parsed, never written to a served path; malformed files
+  fail safe with 422). AV scan hook is `[new]`.
 
 ## 5. Payments (Chapa)
 
@@ -141,10 +144,12 @@ dedicated CI step, and the pre-commit hook. `[built]`
   leakage (all scoped by userId); add PII redaction in prompts/logs.
 - LLM03 Supply Chain. `[partial]` - provider + model ids pinned via env;
   vet/pin dependencies.
-- LLM04 Data/Model Poisoning (priority). `[new]` - only admins add curriculum
-  through the reviewed pipeline; a student-uploaded doc must be scoped to that
-  student and never retrieved into another user's answer. Enforce
-  `visibility`/`ownerId` on content_chunks and filter retrieval by it.
+- LLM04 Data/Model Poisoning (priority). `[built]` - content_chunks carry
+  `visibility` + `ownerId`; retrieval only ever returns PUBLIC chunks plus the
+  requesting user's OWN private chunks, and a private-content answer is never
+  written to the shared response cache. Verified live: user A's private upload
+  grounds only for A; user B gets an honest fallback. Admin-review gating of
+  public curriculum still relies on the (not-yet-RBAC) admin path.
 - LLM05 Improper Output Handling (priority). `[built]` - AI output is rendered
   as text, never HTML; never used to build SQL/commands.
 - LLM06 Excessive Agency (priority). `[built]` - the chat surface cannot trigger
@@ -152,9 +157,10 @@ dedicated CI step, and the pre-commit hook. `[built]`
   invoking user.
 - LLM07 System Prompt Leakage. `[built]` - no secrets/keys/business logic in the
   system prompt.
-- LLM08 Vector/Embedding Weaknesses (priority). `[new]` - tenant + document-level
-  isolation in the vector store; return no more raw chunk content than a feature
-  needs; monitor for poisoning (ties to LLM04).
+- LLM08 Vector/Embedding Weaknesses (priority). `[partial]` - document/user-level
+  isolation in the vector store is enforced (public + own-private only, see
+  LLM04) and verified. Enterprise cross-tenant (school) isolation via a tenant
+  id + RLS, and embedding-inversion limits, are still `[new]`.
 - LLM09 Misinformation. `[built]` - grounding + citations + honest
   "not in the curriculum" fallback; human-QA loop on generated exam questions.
 - LLM10 Unbounded Consumption (priority). `[partial]` - per-tier daily caps +

@@ -15,6 +15,9 @@ export interface IngestionOverrides {
   chapterId?: string;
   year?: number;
   type?: 'curriculum' | 'exam_question';
+  /** Upload isolation: owner + visibility stamped on every chunk. */
+  ownerId?: string;
+  visibility?: 'public' | 'private';
 }
 
 export interface IngestionInput {
@@ -62,6 +65,8 @@ export async function runIngestionPipeline(
     const chunks = chunkText(text, { maxChars: 800, overlap: 100 });
     const embeddings = await embed(chunks);
     const type = input.overrides?.type ?? 'curriculum';
+    const ownerId = input.overrides?.ownerId ?? null;
+    const visibility = input.overrides?.visibility ?? 'public';
 
     // Idempotent re-ingest: drop any prior chunks for this document.
     await prisma.contentChunk.deleteMany({ where: { sourceDocumentId: documentId } });
@@ -70,8 +75,8 @@ export async function runIngestionPipeline(
       // Raw SQL because Prisma cannot write the pgvector `embedding` column.
       await prisma.$executeRawUnsafe(
         `INSERT INTO content_chunks
-           (id, text, embedding, "subjectId", "chapterId", grade, type, year, "sourceDocumentId", "createdAt")
-         VALUES ($1, $2, $3::vector, $4, $5, $6, $7::"ContentType", $8, $9, now())`,
+           (id, text, embedding, "subjectId", "chapterId", grade, type, year, "sourceDocumentId", "ownerId", visibility, "createdAt")
+         VALUES ($1, $2, $3::vector, $4, $5, $6, $7::"ContentType", $8, $9, $10, $11, now())`,
         randomUUID(),
         chunks[i],
         toPgVector(embeddings[i]!),
@@ -81,6 +86,8 @@ export async function runIngestionPipeline(
         type,
         classification.year,
         documentId,
+        ownerId,
+        visibility,
       );
     }
 
