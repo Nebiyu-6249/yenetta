@@ -71,6 +71,11 @@ enum ChatRole {
   system
 }
 
+enum UserRole {
+  student
+  admin
+}
+
 // ════════════════════════ PERSONAL DATA DOMAIN ════════════════════════
 
 model User {
@@ -80,6 +85,7 @@ model User {
   grade     Int? // 9–12
   stream    Stream?
   locale    Locale   @default(en)
+  role      UserRole @default(student)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

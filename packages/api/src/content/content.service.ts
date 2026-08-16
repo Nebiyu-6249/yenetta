@@ -85,4 +85,13 @@ export class ContentService {
   list(): Promise<ContentDocument[]> {
     return this.prisma.contentDocument.findMany({ orderBy: { createdAt: 'desc' }, take: 50 });
   }
+
+  /** A user's own uploaded documents (private-notes view). */
+  listForUploader(uploaderId: string): Promise<ContentDocument[]> {
+    return this.prisma.contentDocument.findMany({
+      where: { uploaderId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+  }
 }

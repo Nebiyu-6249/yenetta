@@ -13,11 +13,14 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { type IngestionOverrides } from '@yenetta/ingestion';
 import { AuditService } from '../audit/audit.service';
 import { CurrentUser, type AuthenticatedUser } from '../common/current-user.decorator';
+import { Roles } from '../common/roles.decorator';
 import { ContentService } from './content.service';
 import { MAX_UPLOAD_BYTES } from './upload-validation';
 
-// NOTE: M2 protects admin endpoints with auth only; role-based admin access
-// (an `isAdmin`/roles check) is layered on in a later milestone.
+// Admin-only: only staff add reviewed curriculum/exam content (public), through
+// this pipeline (SECURITY.md section 14, LLM04). Students upload their own
+// private notes via POST /me/documents instead.
+@Roles('admin')
 @Controller('admin/documents')
 export class AdminController {
   constructor(
@@ -37,18 +40,18 @@ export class AdminController {
       chapterId?: string;
       year?: string;
       type?: string;
-      visibility?: string;
     },
   ) {
     if (!file) {
       throw new BadRequestException('A file is required (form field "file")');
     }
+    // Admin uploads are always public curriculum/exam content.
     const overrides: IngestionOverrides = {
       subjectId: body.subjectId || undefined,
       chapterId: body.chapterId || undefined,
       year: body.year ? Number(body.year) : undefined,
       type: body.type === 'exam_question' ? 'exam_question' : undefined,
-      visibility: body.visibility === 'private' ? 'private' : undefined,
+      visibility: 'public',
     };
     const doc = await this.content.upload(
       { filename: file.originalname, mimetype: file.mimetype, buffer: file.buffer },
