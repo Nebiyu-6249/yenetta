@@ -146,7 +146,12 @@ dedicated CI step, and the pre-commit hook. `[built]`
 
 ## 11. Additional web/infra controls
 
-- MFA on all admin and school-admin accounts. `[new]`.
+- MFA on all admin and school-admin accounts. `[partial]` - TOTP (RFC 6238)
+  second factor for admins is built: enroll/confirm/disable at `/me/mfa`
+  (admin-gated, QR provisioning URI), secrets encrypted at rest (AES-256-GCM),
+  and login enforcement (phone+OTP issues only a short-lived MFA challenge
+  token for enabled admins; `/auth/mfa/verify` completes the login). School-
+  admin roles and org-level enforcement policy are still `[new]`.
 - Encrypted backups + tested restore + retention. `[process]`.
 - WAF + CDN + DDoS protection, fail-safe to cached content. `[process]`.
 - SSRF protection in ingestion and any server-side URL fetch (allowlist, block
@@ -212,8 +217,9 @@ dedicated CI step, and the pre-commit hook. `[built]`
   audit logging. `[partial]` - admin RBAC is `[built]`: a `role` on users +
   `@Roles('admin')` + RolesGuard now gate the content-pipeline endpoints and the
   admin audit-log read endpoint (verified live: student -> 403, admin -> 200);
-  students upload their own PRIVATE notes via `POST /me/documents`. MFA, IP
-  allowlist, and the full console UI are still `[new]`.
+  students upload their own PRIVATE notes via `POST /me/documents`. TOTP MFA for
+  admins is now `[built]` (see section 11). IP allowlist and the full console UI
+  are still `[new]`.
 - School Admin Console (enterprise): scoped to one org - roster upload, seat
   status, aggregate usage; tenant-isolated, least privilege, cannot see other
   tenants or individual student chat beyond policy. `[new]`.

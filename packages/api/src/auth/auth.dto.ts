@@ -23,3 +23,18 @@ export const refreshSchema = z.object({
   refreshToken: z.string().min(10),
 });
 export type RefreshDto = z.infer<typeof refreshSchema>;
+
+// A TOTP authentication code (6 digits), used for MFA verify/enroll/disable.
+const totpCode = z
+  .string()
+  .trim()
+  .regex(/^\d{6}$/, 'Code must be 6 digits');
+
+export const mfaVerifySchema = z.object({
+  mfaToken: z.string().min(10),
+  code: totpCode,
+});
+export type MfaVerifyDto = z.infer<typeof mfaVerifySchema>;
+
+export const mfaCodeSchema = z.object({ code: totpCode });
+export type MfaCodeDto = z.infer<typeof mfaCodeSchema>;
