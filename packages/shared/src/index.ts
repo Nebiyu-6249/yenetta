@@ -8,4 +8,5 @@ export * from './exam';
 export * from './plan/schedule';
 export * from './gamification/stats';
 export * from './i18n';
+export * from './security/redact';
 export * from './constants';
