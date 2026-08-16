@@ -68,7 +68,9 @@ export function buildGroundedPrompt(
     system.push('Respond in Amharic (በአማርኛ መልስ ስጥ), keeping any cited chapter titles as given.');
   }
   if (options.studentContext) {
-    system.push(`STUDENT CONTEXT (use to personalize, do not contradict): ${options.studentContext}`);
+    system.push(
+      `STUDENT CONTEXT (use to personalize, do not contradict): ${options.studentContext}`,
+    );
   }
   return [
     { role: 'system', content: system.join(' ') },

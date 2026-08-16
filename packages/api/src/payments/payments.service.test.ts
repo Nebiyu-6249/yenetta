@@ -82,7 +82,10 @@ describe('PaymentsService', () => {
 
   it('extends an existing active subscription instead of creating a new one', async () => {
     const future = new Date(Date.now() + 10 * 86_400_000);
-    const prisma = makePrisma({ id: 'p1', userId: 'user-1', status: 'pending' }, { id: 's1', expiresAt: future });
+    const prisma = makePrisma(
+      { id: 'p1', userId: 'user-1', status: 'pending' },
+      { id: 's1', expiresAt: future },
+    );
     const service = new PaymentsService(prisma as unknown as PrismaService, makeProvider());
     await service.handleWebhook('{}', 'sig');
 
@@ -94,6 +97,8 @@ describe('PaymentsService', () => {
     const prisma = makePrisma(null);
     const service = new PaymentsService(prisma as unknown as PrismaService, makeProvider());
     await expect(service.redeemVoucher('user-1', 'yenetta-premium')).resolves.toEqual({ ok: true });
-    await expect(service.redeemVoucher('user-1', 'nope')).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.redeemVoucher('user-1', 'nope')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
   });
 });

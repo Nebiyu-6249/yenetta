@@ -26,7 +26,11 @@ describe('EntitlementsService.resolve', () => {
     const prisma = {
       subscription: { findFirst: vi.fn().mockResolvedValue(subscription) },
     };
-    return new EntitlementsService(prisma as unknown as PrismaService, new JwtService({}), makeEnv());
+    return new EntitlementsService(
+      prisma as unknown as PrismaService,
+      new JwtService({}),
+      makeEnv(),
+    );
   }
 
   it('defaults to the free tier when there is no active subscription', async () => {

@@ -168,7 +168,7 @@ function TimedMock({
     <div>
       {!result && (
         <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-cream px-4 py-1.5 font-body text-sm font-semibold text-bronze">
-          ⏱ {mm}:{ss} remaining
+          {mm}:{ss} remaining
         </div>
       )}
       <McqRunner

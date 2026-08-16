@@ -6,22 +6,22 @@ const FEATURES = [
   {
     title: 'Chat-first tutor',
     body: 'Ask anything in plain language. Every answer is grounded in your textbooks and past papers — with sources, never guesswork.',
-    icon: '💬',
+    icon: '',
   },
   {
     title: 'Study tools',
     body: 'Chapter summaries, study notes, flashcards with spaced repetition, and AI quizzes — built from the real curriculum.',
-    icon: '📚',
+    icon: '',
   },
   {
     title: 'Exam practice',
     body: 'Practice past national exams by year and by chapter, with explanations, plus timed mock exams that feel like the real thing.',
-    icon: '📝',
+    icon: '',
   },
   {
     title: 'Entrance-exam coach',
     body: 'Grade 12 ESSLCE/EUEE prep where every past question is linked to the chapter that teaches it.',
-    icon: '🎯',
+    icon: '',
   },
 ];
 

@@ -154,7 +154,7 @@ async function insertChunk(params: {
 }
 
 async function main(): Promise<void> {
-  console.log('🌱 Seeding Yenetta sample dataset...');
+  console.log('Seeding Yenetta sample dataset...');
 
   // Idempotent: clear seed-origin chunks (those without a source document).
   await prisma.$executeRawUnsafe(`DELETE FROM content_chunks WHERE "sourceDocumentId" IS NULL`);
@@ -259,7 +259,7 @@ async function main(): Promise<void> {
   }
   console.log(`  • ${QUOTAS.length} quota rows`);
 
-  console.log('✅ Seed complete.');
+  console.log('Seed complete.');
 }
 
 main()

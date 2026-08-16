@@ -86,7 +86,8 @@ export class ChapaPaymentProvider implements PaymentProvider {
   parseWebhook(payload: unknown): WebhookResult {
     const body = (payload ?? {}) as ChapaWebhookPayload;
     const reference = body.tx_ref ?? body.reference ?? '';
-    const status: ProviderPaymentStatus = body.status === 'success' ? 'success' : body.status === 'failed' ? 'failed' : 'pending';
+    const status: ProviderPaymentStatus =
+      body.status === 'success' ? 'success' : body.status === 'failed' ? 'failed' : 'pending';
     return {
       providerTxId: reference,
       reference,

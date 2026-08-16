@@ -31,7 +31,7 @@ export default function PaywallPage() {
     try {
       await api.redeemVoucher(voucher);
       await refresh();
-      setMessage('🎉 Premium unlocked!');
+      setMessage('Premium unlocked!');
     } catch {
       setMessage('Invalid or expired voucher code.');
     } finally {
@@ -45,10 +45,11 @@ export default function PaywallPage() {
     <div className="mx-auto max-w-4xl">
       <div className="mb-8 text-center">
         <h1 className="font-heading text-3xl font-bold text-ink">
-          {premium ? 'You’re on Premium 🎉' : 'Upgrade to Premium'}
+          {premium ? 'You’re on Premium' : 'Upgrade to Premium'}
         </h1>
         <p className="mx-auto mt-2 max-w-lg font-body text-sm text-muted">
-          Unlock unlimited AI tutoring, full ESSLCE/EUEE prep, unlimited mock exams, and study plans.
+          Unlock unlimited AI tutoring, full ESSLCE/EUEE prep, unlimited mock exams, and study
+          plans.
         </p>
       </div>
 
@@ -67,7 +68,9 @@ export default function PaywallPage() {
           </div>
 
           <div className="mt-6 border-t border-gold/10 pt-4">
-            <p className="mb-2 font-body text-sm font-medium text-ink">Have a voucher / scratch code?</p>
+            <p className="mb-2 font-body text-sm font-medium text-ink">
+              Have a voucher / scratch code?
+            </p>
             <div className="flex gap-2">
               <input
                 value={voucher}

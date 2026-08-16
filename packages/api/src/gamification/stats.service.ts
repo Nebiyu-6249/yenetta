@@ -1,5 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { levelForXp, updateStreak, xpForActivity, xpToNextLevel, type XpActivity } from '@yenetta/shared';
+import {
+  levelForXp,
+  updateStreak,
+  xpForActivity,
+  xpToNextLevel,
+  type XpActivity,
+} from '@yenetta/shared';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface StatsView {

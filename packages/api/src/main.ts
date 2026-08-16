@@ -11,7 +11,7 @@ async function bootstrap(): Promise<void> {
 
   const port = Number(process.env.API_PORT ?? 3001);
   await app.listen(port);
-  Logger.log(`🔥 Yenetta API listening on http://localhost:${port}/api`, 'Bootstrap');
+  Logger.log(`Yenetta API listening on http://localhost:${port}/api`, 'Bootstrap');
 }
 
 void bootstrap();

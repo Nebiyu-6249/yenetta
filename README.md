@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🔥 Yenetta
+# Yenetta
 
 **AI study companion for Ethiopian high-school students (Grades 9–12)**
 
