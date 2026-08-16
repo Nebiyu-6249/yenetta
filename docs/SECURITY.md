@@ -144,7 +144,15 @@ dedicated CI step, and the pre-commit hook. `[built]`
 ## 10. Dependencies / supply chain
 
 - Automated dependency scanning (Dependabot/Renovate) + SCA + lockfile
-  integrity + image scanning. `[new]`.
+  integrity + image scanning. `[partial]` - `.github/dependabot.yml` opens
+  weekly grouped PRs for the npm tree and GitHub Actions; a CI `security-scan`
+  job gates every push/PR with a gitleaks secret scan (verified clean over the
+  full tree and history) and `pnpm audit --prod --audit-level=critical`
+  (currently 0), plus a non-blocking full advisory report so the existing
+  high-severity backlog (mostly transitive/dev: postcss, body-parser, dev
+  vitest) is visible and burned down via Dependabot. `pnpm install
+  --frozen-lockfile` enforces lockfile integrity. Image scanning is `[new]`
+  and lands when the deploy Dockerfiles exist (no container image yet).
 
 ## 11. Additional web/infra controls
 
@@ -246,7 +254,9 @@ Do not launch to students until every box is checked:
 - [ ] AI red-team pass: prompt-injection, jailbreak, output-handling, cost-abuse.
 - [ ] Encrypted backups with a successfully tested restore.
 - [ ] Secret scan clean; git history purged; keys rotated.
-- [ ] Dependency + container scans clean; SAST run.
+- [ ] Dependency + container scans clean; SAST run. (CI secret scan +
+      production-critical dependency gate live; high-severity backlog and
+      container image scanning still open.)
 - [ ] Admin + school-admin MFA enforced; audit logging live.
 - [ ] Data-protection: in-country personal-data storage, DPIA done, breach
       process documented, privacy policy + consent live.
