@@ -113,4 +113,22 @@ describe('ChatService', () => {
     await expect(service.chat('user1', 'hi')).rejects.toBeInstanceOf(HttpException);
     expect(llm.chat).not.toHaveBeenCalled();
   });
+
+  it('redacts PII from the message before it reaches the LLM', async () => {
+    const { service, retrieval, llm, prisma } = makeMocks();
+    retrieval.retrieve.mockResolvedValue([supportingChunk]);
+
+    await service.chat('user1', 'What is a cell? Email me at kid@school.et or +251912345678');
+
+    const sent = JSON.stringify(llm.chat.mock.calls[0][0].messages);
+    expect(sent).not.toContain('kid@school.et');
+    expect(sent).not.toContain('251912345678');
+    expect(sent).toContain('[redacted-email]');
+    expect(sent).toContain('[redacted-phone]');
+    // The student's own message is still persisted verbatim (their data).
+    const persistedUser = prisma.chatMessage.create.mock.calls.find(
+      (c: [{ data: { role: string; content: string } }]) => c[0].data.role === 'user',
+    );
+    expect(persistedUser[0].data.content).toContain('kid@school.et');
+  });
 });

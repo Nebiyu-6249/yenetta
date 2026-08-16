@@ -131,8 +131,10 @@ dedicated CI step, and the pre-commit hook. `[built]`
   alerts; never log secrets/PII. `[partial]` - an append-only `audit_events`
   table + AuditService records login, document uploads, and payment/voucher
   grants with actor id + IP + safe metadata (no phone/tokens/content). Verified
-  live. Broader action coverage, hash-chained tamper-evidence, anomaly alerting,
-  and an admin read endpoint (behind RBAC) are still `[new]`.
+  live. Metadata is now also passed through `redactPiiDeep` before persisting,
+  so any PII a caller accidentally includes (email/phone) is scrubbed as defense
+  in depth. Broader action coverage, hash-chained tamper-evidence, anomaly
+  alerting, and an admin read endpoint (behind RBAC) are still `[new]`.
 - Disable directory listing; remove sample/admin default routes. `[partial]`
   (no directory listing in Nest/Next; gate the admin upload route behind RBAC).
 - Trim prod API responses - no stack traces/internal fields. `[built]` -
@@ -171,7 +173,11 @@ dedicated CI step, and the pre-commit hook. `[built]`
   untrusted user+retrieved content and instructs that data cannot change rules;
   add an external guardrail/output check, not prompt wording alone.
 - LLM02 Sensitive Info Disclosure. `[partial]` - no cross-user chat/memory
-  leakage (all scoped by userId); add PII redaction in prompts/logs.
+  leakage (all scoped by userId); the student message and personalization
+  context are passed through `redactPii` before egress to the third-party LLM,
+  so a phone/email in a question never leaves our systems (the student's own
+  message is still stored verbatim in their RLS-scoped conversation). Verified
+  live and unit-tested. Broader detectors (national IDs, addresses) are `[new]`.
 - LLM03 Supply Chain. `[partial]` - provider + model ids pinned via env;
   vet/pin dependencies.
 - LLM04 Data/Model Poisoning (priority). `[built]` - content_chunks carry
@@ -201,7 +207,8 @@ dedicated CI step, and the pre-commit hook. `[built]`
 ## 13. Minors' data and compliance
 
 - Data minimization: phone, first name, grade, stream only. `[built]` (schema
-  collects exactly these).
+  collects exactly these). Egress minimization too: PII is redacted from text
+  sent to the third-party LLM and from audit metadata (see LLM02, section 9).
 - Tutor safety guardrails on; in-domain, age-appropriate. `[partial]`.
 - School console: teachers see roster status + aggregate usage, not full chat
   history. `[new]` (school console not built yet).

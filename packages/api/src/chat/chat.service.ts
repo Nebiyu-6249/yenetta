@@ -4,6 +4,7 @@ import {
   MAX_SUPPORTING_CHUNKS,
   MIN_SUPPORTING_SIMILARITY,
   NOT_IN_CURRICULUM_MESSAGE,
+  redactPii,
   SUPPORTING_RELATIVE_RATIO,
   type CitedSource,
 } from '@yenetta/shared';
@@ -104,15 +105,18 @@ export class ChatService {
     // 5. Grounded generation with citations, personalized by long-term memory
     //    and answered in the requested language (Amharic when language='am').
     const studentContext = await this.memory.getContext(userId).catch(() => '');
+    // Redact PII before the message leaves our systems for the third-party LLM.
+    // The student's own message is still persisted verbatim in their (RLS-scoped)
+    // conversation; only the copy sent to the provider is scrubbed.
     const prompt = buildGroundedPrompt(
-      message,
+      redactPii(message),
       supporting.map((c) => ({
         text: c.text,
         chapterTitle: c.chapterTitle,
         type: c.type,
         year: c.year,
       })),
-      { studentContext: studentContext || undefined, language },
+      { studentContext: studentContext ? redactPii(studentContext) : undefined, language },
     );
     const tier = this.router.tierForTask('chat');
     const result = await this.llm.chat({

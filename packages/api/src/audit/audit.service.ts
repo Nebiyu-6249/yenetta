@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { redactPiiDeep } from '@yenetta/shared';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface AuditEventInput {
@@ -31,7 +32,9 @@ export class AuditService {
           targetType: event.targetType ?? null,
           targetId: event.targetId ?? null,
           ip: event.ip ?? null,
-          metadata: (event.metadata as object | undefined) ?? undefined,
+          // Defense in depth: scrub any PII a caller may have put in metadata,
+          // so the append-only log never persists personal data by accident.
+          metadata: event.metadata ? (redactPiiDeep(event.metadata) as object) : undefined,
         },
       });
     } catch (err) {

@@ -19,4 +19,17 @@ describe('AuditService', () => {
     const service = new AuditService(prisma as never);
     await expect(service.record({ action: 'x' })).resolves.toBeUndefined();
   });
+
+  it('redacts PII from metadata before persisting', async () => {
+    const create = vi.fn().mockResolvedValue({});
+    const service = new AuditService({ auditEvent: { create } } as never);
+    await service.record({
+      action: 'note.added',
+      actorUserId: 'u1',
+      metadata: { note: 'ping me at a@b.com or +251911223344' },
+    });
+
+    const persisted = create.mock.calls[0][0].data.metadata as { note: string };
+    expect(persisted.note).toBe('ping me at [redacted-email] or [redacted-phone]');
+  });
 });
