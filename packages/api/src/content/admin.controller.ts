@@ -12,6 +12,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { type IngestionOverrides } from '@yenetta/ingestion';
 import { CurrentUser, type AuthenticatedUser } from '../common/current-user.decorator';
 import { ContentService } from './content.service';
+import { MAX_UPLOAD_BYTES } from './upload-validation';
 
 // NOTE: M2 protects admin endpoints with auth only; role-based admin access
 // (an `isAdmin`/roles check) is layered on in a later milestone.
@@ -20,11 +21,18 @@ export class AdminController {
   constructor(private readonly content: ContentService) {}
 
   @Post()
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_BYTES } }))
   async upload(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFileDecorator() file: Express.Multer.File | undefined,
-    @Body() body: { subjectId?: string; chapterId?: string; year?: string; type?: string },
+    @Body()
+    body: {
+      subjectId?: string;
+      chapterId?: string;
+      year?: string;
+      type?: string;
+      visibility?: string;
+    },
   ) {
     if (!file) {
       throw new BadRequestException('A file is required (form field "file")');
@@ -34,6 +42,7 @@ export class AdminController {
       chapterId: body.chapterId || undefined,
       year: body.year ? Number(body.year) : undefined,
       type: body.type === 'exam_question' ? 'exam_question' : undefined,
+      visibility: body.visibility === 'private' ? 'private' : undefined,
     };
     const doc = await this.content.upload(
       { filename: file.originalname, mimetype: file.mimetype, buffer: file.buffer },

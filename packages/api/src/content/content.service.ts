@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, UnprocessableEntityException } from '@nestjs/common';
 import type { ContentDocument } from '@prisma/client';
 import {
   runIngestionPipeline,
@@ -10,6 +10,7 @@ import { type Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { LLM_PROVIDER, type LlmProvider } from '../providers/llm/llm-provider.interface';
 import { IngestionQueueService } from './ingestion-queue.service';
+import { validateUpload } from './upload-validation';
 
 @Injectable()
 export class ContentService {
@@ -30,11 +31,20 @@ export class ContentService {
     uploaderId: string,
     overrides: IngestionOverrides = {},
   ): Promise<ContentDocument> {
+    // Reject bad/oversized/mismatched files at the boundary before storing.
+    validateUpload(file);
+
+    // Private uploads are scoped to their owner; public is shared curriculum.
+    const visibility = overrides.visibility === 'private' ? 'private' : 'public';
+    const ownerId = visibility === 'private' ? uploaderId : undefined;
+    const scopedOverrides: IngestionOverrides = { ...overrides, visibility, ownerId };
+
     const doc = await this.prisma.contentDocument.create({
       data: {
         uploaderId,
         filename: file.filename,
         type: overrides.type ?? 'curriculum',
+        visibility,
         status: 'uploaded',
       },
     });
@@ -47,13 +57,22 @@ export class ContentService {
           mimetype: file.mimetype,
           bufferBase64: file.buffer.toString('base64'),
         },
-        overrides,
+        overrides: scopedOverrides,
       });
     } else {
-      await runIngestionPipeline(
-        { prisma: this.prisma, embed: (texts) => this.llm.embed(texts).then((r) => r.embeddings) },
-        { documentId: doc.id, file, overrides },
-      );
+      try {
+        await runIngestionPipeline(
+          {
+            prisma: this.prisma,
+            embed: (texts) => this.llm.embed(texts).then((r) => r.embeddings),
+          },
+          { documentId: doc.id, file, overrides: scopedOverrides },
+        );
+      } catch {
+        // Malformed/unreadable file (e.g. a corrupt PDF): fail safe with a 422,
+        // not a 500. The document is left in `failed` status by the pipeline.
+        throw new UnprocessableEntityException('Could not extract text from the uploaded document');
+      }
     }
 
     return this.prisma.contentDocument.findUniqueOrThrow({ where: { id: doc.id } });
