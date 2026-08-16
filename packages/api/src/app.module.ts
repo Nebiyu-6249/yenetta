@@ -4,6 +4,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { RateLimitGuard } from './common/rate-limit.guard';
+import { RateLimiterService } from './common/rate-limiter.service';
 import { ChatModule } from './chat/chat.module';
 import { AppConfigModule } from './config/config.module';
 import { ContentModule } from './content/content.module';
@@ -49,6 +51,9 @@ import { UsersModule } from './users/users.module';
   controllers: [AppController, HealthController],
   providers: [
     AppService,
+    // Per-route + per-IP rate limiting on @RateLimit() routes (runs first).
+    RateLimiterService,
+    { provide: APP_GUARD, useClass: RateLimitGuard },
     // Every route requires a valid access token unless marked @Public().
     { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],

@@ -101,9 +101,14 @@ dedicated CI step, and the pre-commit hook. `[built]`
 
 ## 8. Rate limiting, bots, abuse
 
-- Global + per-user + per-endpoint limits (Redis). `[partial]` (per-user OTP +
-  AI quotas exist; add a global/edge limiter and per-endpoint limits).
-- Bot protection / CAPTCHA on signup + OTP request. `[new]`.
+- Global + per-user + per-endpoint limits (Redis). `[partial]` - per-endpoint +
+  per-IP rate limiting via `@RateLimit` + RateLimitGuard is `[built]` and applied
+  to OTP request/verify/refresh (verified live: 6th OTP request in a minute ->
+  429 with X-RateLimit-* + Retry-After headers); per-user AI quotas `[built]`.
+  The limiter store is in-memory - swap for Redis for multi-instance `[new]`.
+- Bot protection / CAPTCHA on signup + OTP request. `[new]` - per-IP rate
+  limiting now blunts burst abuse; a CAPTCHA challenge on suspicious bursts is
+  still to add.
 - Per-tier AI caps (daily free / weekly paid) + cost ceilings. `[partial]`
   (daily AI quota + usage_events cost logging exist; add weekly caps + hard
   monthly cost ceiling per user/tenant).

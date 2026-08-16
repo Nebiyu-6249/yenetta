@@ -13,6 +13,9 @@ async function bootstrap(): Promise<void> {
   // rawBody lets the Chapa webhook verify its HMAC signature over the raw payload.
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
 
+  // Trust the first proxy hop so req.ip reflects X-Forwarded-For (rate limiting).
+  app.set('trust proxy', 1);
+
   // Security headers (SECURITY.md section 1): HSTS w/ preload, nosniff,
   // frame-ancestors/clickjacking, referrer + a conservative API CSP.
   app.use(
