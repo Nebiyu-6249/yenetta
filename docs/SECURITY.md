@@ -83,9 +83,21 @@ dedicated CI step, and the pre-commit hook. `[built]`
 
 ## 6. Data and database
 
-- Least-privilege DB roles (app role: no DDL/superuser). `[new]` - migrations
-  run as an owner role; the runtime app connects as a restricted role.
-- Row-Level Security as defense-in-depth (tenant/student scoping). `[new]`.
+- Least-privilege DB roles (app role: no DDL/superuser). `[partial]` -
+  `packages/api/prisma/sql/rls-and-least-privilege.sql` provisions a
+  `yenetta_app` LOGIN role with DML-only grants (SELECT/INSERT/UPDATE/DELETE,
+  sequence USAGE/SELECT, plus matching ALTER DEFAULT PRIVILEGES) and
+  NOSUPERUSER/NOCREATEDB/NOCREATEROLE/NOBYPASSRLS; DDL is revoked. Migrations
+  keep running as the owner role. Verified live: the restricted role is denied
+  CREATE/DROP. Remaining `[new]`: point the running app's `DATABASE_URL` at
+  `yenetta_app` (deferred so it does not destabilise the verified build).
+- Row-Level Security as defense-in-depth (tenant/student scoping). `[partial]` -
+  the same SQL enables + FORCEs RLS on all 13 `userId` tables and on
+  `chat_messages` (via an EXISTS subquery to its conversation), keyed on the
+  `app.user_id` session GUC and failing closed when it is unset. Verified live
+  against the restricted role: each session sees only its own rows and a
+  cross-tenant write is rejected by the policy. Remaining `[new]`: wire the app
+  to run `set_config('app.user_id', <userId>, true)` per request/transaction.
 - Object-level authorization / no IDOR - every fetch checks ownership. `[partial]`
   (chat/plans/progress already scope by userId; audit every record read).
 - Encrypt sensitive data at rest (AES-256). `[new]` - disk/volume encryption +
@@ -172,8 +184,9 @@ dedicated CI step, and the pre-commit hook. `[built]`
   system prompt.
 - LLM08 Vector/Embedding Weaknesses (priority). `[partial]` - document/user-level
   isolation in the vector store is enforced (public + own-private only, see
-  LLM04) and verified. Enterprise cross-tenant (school) isolation via a tenant
-  id + RLS, and embedding-inversion limits, are still `[new]`.
+  LLM04) and verified. Relational user data now has a defense-in-depth RLS
+  layer (see section 6). Enterprise cross-tenant (school) isolation via a tenant
+  id, and embedding-inversion limits, are still `[new]`.
 - LLM09 Misinformation. `[built]` - grounding + citations + honest
   "not in the curriculum" fallback; human-QA loop on generated exam questions.
 - LLM10 Unbounded Consumption (priority). `[partial]` - per-tier daily caps +
