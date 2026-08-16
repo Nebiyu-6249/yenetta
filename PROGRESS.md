@@ -5,6 +5,64 @@ committed before pausing for human review (see `docs/BUILD_BRIEF.md` §0).
 
 ---
 
+## Security & Hardening arc — _complete (2026-08-16)_
+
+Applied the Security & Hardening Build Delta on top of M0-M7. Each batch was
+verified (lint + no-emoji + typecheck + tests, and live against Postgres +
+pgvector where applicable), then committed and pushed. Tracker: `docs/SECURITY.md`.
+
+### What was done
+
+- **Transport / app hardening:** Helmet (HSTS/CSP/referrer/CORP), CORS allowlist
+  (never `*`), request body-size cap, production error sanitization
+  (`AllExceptionsFilter`), Next.js security headers.
+- **Auth / abuse:** per-IP rate limiting on OTP + auth routes; rotating,
+  revocable refresh tokens with `jti`.
+- **Uploads / RAG isolation:** magic-byte upload validation; `content_chunks`
+  carry `visibility` + `ownerId`; retrieval returns only PUBLIC plus the
+  requester's OWN private chunks; private answers never enter the shared cache
+  (LLM04/LLM08). `/admin/documents` (admin, public) vs `/me/documents`
+  (private notes).
+- **Payments:** webhook verifies amount + currency against the recorded payment;
+  server-side pricing; audited grants.
+- **Audit log:** append-only `audit_events` (actor + IP + safe metadata), admin
+  read endpoint behind RBAC.
+- **Admin RBAC:** `role` on users + `@Roles` + `RolesGuard` (student -> 403,
+  admin -> 200, verified live).
+- **DB least-privilege + RLS:** `packages/api/prisma/sql/rls-and-least-privilege.sql`
+  provisions a DML-only `yenetta_app` role and FORCEs row-level security on all
+  user-scoped tables keyed on `app.user_id`. Verified live: per-user isolation,
+  cross-tenant write rejected, DDL denied. (App-role cutover deferred.)
+- **Admin TOTP MFA:** RFC 6238 (no new dependency), secret encrypted at rest
+  (AES-256-GCM), `/me/mfa` enroll/confirm/disable, and login enforcement (OTP
+  yields only a short-lived challenge; `/auth/mfa/verify` completes). Verified
+  live end to end.
+- **PII redaction:** `redactPii`/`redactPiiDeep` scrub email/phone from LLM
+  egress and audit metadata; the student's own message is still stored verbatim.
+- **No-emoji rule:** `scripts/check-no-emoji.mjs` fails CI on any emoji codepoint.
+- **Supply chain:** `.github/dependabot.yml` + a CI `security-scan` job
+  (gitleaks secret gate + `pnpm audit --prod --audit-level=critical` gate +
+  non-blocking advisory report).
+
+### Next session — validate the core, start the pilot (features paused)
+
+No new features. Focus:
+
+1. **Validate the core end to end** against real infra (Postgres + pgvector +
+   Redis): OTP login, grounded chat with citations + honest fallback, quota
+   enforcement, uploads + ingestion, payments (Chapa sandbox), admin MFA login.
+   Confirm the full `pnpm test` suite and a manual smoke on web + mobile.
+2. **Pilot prerequisites:** load real curriculum content (replace seed
+   placeholders), set real secrets/env (`.env` from `.env.example`, incl.
+   `ADMIN_PHONE`, Chapa sandbox keys, SMS provider), decide hosting + run the
+   RLS/least-privilege SQL and the app-role cutover, and walk the pre-launch
+   security gate in `docs/SECURITY.md`.
+3. **Open items to weigh before pilot:** high-severity dependency backlog (via
+   Dependabot), CAPTCHA on OTP, and container image scanning once deploy
+   Dockerfiles exist.
+
+---
+
 ## M7 — Phase 2 (memory, plans, analytics, gamification, Amharic) — _complete (2026-06-29)_
 
 ### What was done
