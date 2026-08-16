@@ -10,6 +10,10 @@ export const envSchema = z.object({
   API_PORT: z.coerce.number().int().positive().default(3001),
   SITE_URL: z.string().default('https://www.yenetta.com'),
 
+  // Security: comma-separated CORS allowlist (no "*"); request body cap.
+  CORS_ORIGINS: z.string().default('http://localhost:3000'),
+  REQUEST_BODY_LIMIT: z.string().default('1mb'),
+
   DATABASE_URL: z.string().default('postgresql://yenetta:yenetta@localhost:5432/yenetta'),
   CONTENT_DATABASE_URL: z.string().optional(),
   REDIS_URL: z.string().default('redis://localhost:6379'),

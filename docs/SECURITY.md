@@ -17,13 +17,15 @@ dedicated CI step, and the pre-commit hook. `[built]`
 
 ## 1. Transport, headers, CORS, cookies
 
-- Force HTTPS + HSTS with preload. `[new]` (terminate at the edge/proxy; app
-  sets HSTS via Helmet - see api bootstrap).
+- Force HTTPS + HSTS with preload. `[built]` app-level (Helmet sets HSTS
+  `max-age=63072000; includeSubDomains; preload`); TLS termination/redirect at
+  the edge/proxy is `[process]`.
 - Full security-header set (CSP, frame-ancestors/X-Frame-Options, nosniff,
-  Referrer-Policy, Permissions-Policy). `[new]` - add Helmet to the API and
-  security headers to `next.config` for the web app.
-- Lock CORS to known origins (no `*`), from `CORS_ORIGINS` env. `[partial]`
-  (CORS is enabled; needs the allowlist).
+  Referrer-Policy, Permissions-Policy). `[built]` - Helmet on the API
+  (`main.ts`) and `headers()` in `next.config.mjs` for the web app. Verified
+  live: CSP, HSTS, nosniff, X-Frame-Options, Referrer-Policy all emitted.
+- Lock CORS to known origins (no `*`), from `CORS_ORIGINS` env. `[built]` -
+  allowlist enforced; a disallowed origin gets no Access-Control-Allow-Origin.
 - Secure cookie flags (Secure, HttpOnly, SameSite). `[new]` - tokens are
   currently Bearer/JSON; if cookies are introduced for web sessions, set flags.
 
@@ -50,7 +52,9 @@ dedicated CI step, and the pre-commit hook. `[built]`
 - Sanitize on store, escape on render. `[partial]` - React/Next escape by
   default and AI answers are rendered as text (never dangerouslySetInnerHTML);
   add explicit sanitization for any rich fields.
-- Limit request/body size; reject oversized payloads. `[new]`.
+- Limit request/body size; reject oversized payloads. `[built]` - JSON/urlencoded
+  capped at `REQUEST_BODY_LIMIT` (default 1mb); oversized returns 413 with a
+  safe generic body. Verified live.
 
 ## 4. File uploads
 
@@ -103,8 +107,9 @@ dedicated CI step, and the pre-commit hook. `[built]`
   alerts; never log secrets/PII. `[new]`.
 - Disable directory listing; remove sample/admin default routes. `[partial]`
   (no directory listing in Nest/Next; gate the admin upload route behind RBAC).
-- Trim prod API responses - no stack traces/internal fields. `[new]` - global
-  exception filter that returns safe messages in production.
+- Trim prod API responses - no stack traces/internal fields. `[built]` -
+  `AllExceptionsFilter` returns a generic body for 5xx in production and never
+  leaks stacks; 4xx validation bodies are preserved.
 
 ## 10. Dependencies / supply chain
 
