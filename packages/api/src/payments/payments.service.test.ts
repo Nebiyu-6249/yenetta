@@ -24,10 +24,16 @@ function makeProvider(overrides: Partial<PaymentProvider> = {}): PaymentProvider
 }
 
 function makePrisma(payment: unknown, existingSub: unknown = null) {
+  // Recorded payments default to the server-side price so amount/currency
+  // verification passes unless a test overrides them.
+  const withDefaults =
+    payment && typeof payment === 'object'
+      ? { amount: 299, currency: 'ETB', ...(payment as object) }
+      : payment;
   return {
     payment: {
       create: vi.fn().mockResolvedValue({}),
-      findUnique: vi.fn().mockResolvedValue(payment),
+      findUnique: vi.fn().mockResolvedValue(withDefaults),
       update: vi.fn().mockResolvedValue({}),
     },
     subscription: {
@@ -70,6 +76,24 @@ describe('PaymentsService', () => {
     const outcome = await service.handleWebhook('{}', 'sig');
 
     expect(outcome.status).toBe('idempotent');
+    expect(prisma.subscription.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects a successful webhook whose amount does not match the recorded payment', async () => {
+    // Recorded price is 1 but the webhook claims a 299 success -> reject, no grant.
+    const prisma = makePrisma({ id: 'p1', userId: 'user-1', status: 'pending', amount: 1 });
+    const service = new PaymentsService(prisma as unknown as PrismaService, makeProvider());
+    await expect(service.handleWebhook('{}', 'sig')).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.subscription.create).not.toHaveBeenCalled();
+    expect(prisma.payment.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'failed' }) }),
+    );
+  });
+
+  it('rejects a webhook with a mismatched currency', async () => {
+    const prisma = makePrisma({ id: 'p1', userId: 'user-1', status: 'pending', currency: 'USD' });
+    const service = new PaymentsService(prisma as unknown as PrismaService, makeProvider());
+    await expect(service.handleWebhook('{}', 'sig')).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.subscription.create).not.toHaveBeenCalled();
   });
 

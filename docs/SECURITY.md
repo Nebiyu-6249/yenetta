@@ -70,11 +70,15 @@ dedicated CI step, and the pre-commit hook. `[built]`
 ## 5. Payments (Chapa)
 
 - Verify webhook signatures (HMAC, timing-safe). `[built]`.
-- Server-side pricing - never trust client amounts. `[new]` - move plan prices
-  to a server catalog; ignore any client-supplied amount.
+- Server-side pricing - never trust client amounts. `[built]` - checkout takes
+  no client amount; the price is a server-side constant (PREMIUM_PRICE) recorded
+  on the pending payment.
 - Idempotency keys + replay-window + server-side amount/currency verification +
-  reconciliation. `[partial]` (webhook is idempotent on `success`; add
-  replay-window + amount/currency assertions + reconciliation job).
+  reconciliation. `[partial]` - webhook is idempotent on `success` `[built]` and
+  now verifies the paid amount/currency against the recorded payment before
+  granting Premium `[built]` (a mismatched/underpaid webhook is rejected and the
+  payment marked failed). Timestamp-based replay-window + a reconciliation job
+  are still `[new]`.
 - Never store card/PIN (PCI handled by Chapa). `[built]`.
 
 ## 6. Data and database

@@ -78,6 +78,23 @@ export class PaymentsService {
     }
 
     if (parsed.status === 'success') {
+      // Server-side amount/currency verification (SECURITY.md section 5): never
+      // grant Premium unless the paid amount/currency match what we recorded at
+      // checkout. Guards against tampered/underpaid webhooks.
+      const expectedAmount = Number(payment.amount);
+      const amountMatches = Number.isFinite(parsed.amount) && parsed.amount === expectedAmount;
+      const currencyMatches = parsed.currency === payment.currency;
+      if (!amountMatches || !currencyMatches) {
+        this.logger.warn(
+          `Payment ${payment.id} amount/currency mismatch: expected ${expectedAmount} ${payment.currency}, got ${parsed.amount} ${parsed.currency}`,
+        );
+        await this.prisma.payment.update({
+          where: { id: payment.id },
+          data: { status: 'failed', rawWebhook: parsed as unknown as object },
+        });
+        throw new BadRequestException('Payment amount or currency mismatch');
+      }
+
       await this.prisma.payment.update({
         where: { id: payment.id },
         data: { status: 'success', rawWebhook: parsed as unknown as object },
