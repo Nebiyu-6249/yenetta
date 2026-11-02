@@ -12,6 +12,27 @@
 
 export const EMBEDDING_DIM = 1536;
 
+/**
+ * Model id recorded on every chunk embedded by the deterministic embedder.
+ * Vectors from different models are not comparable, so each chunk stores the
+ * model that produced it and retrieval only searches the active model's chunks.
+ */
+export const STUB_EMBEDDING_MODEL = 'stub-embedding';
+
+/**
+ * Single rule for which backend embeds (and chats): OpenAI only when it is the
+ * selected provider AND a key is present, otherwise the offline stub. The API,
+ * the ingestion worker, the seed, and the re-embed job all use this so they
+ * can never disagree about which vector space they are writing to.
+ */
+export function selectLlmBackend(env: {
+  LLM_PROVIDER?: string;
+  OPENAI_API_KEY?: string;
+}): 'openai' | 'stub' {
+  const provider = env.LLM_PROVIDER || 'openai';
+  return provider === 'openai' && env.OPENAI_API_KEY ? 'openai' : 'stub';
+}
+
 const STOPWORDS = new Set([
   'a',
   'an',

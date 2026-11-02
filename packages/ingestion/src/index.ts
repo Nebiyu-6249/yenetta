@@ -4,4 +4,5 @@ export * from './extract';
 export * from './classify';
 export * from './run-pipeline';
 export * from './embed';
+export * from './reembed';
 export * from './queue';

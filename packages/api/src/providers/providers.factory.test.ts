@@ -14,6 +14,23 @@ describe('provider factories', () => {
     );
     expect(createLlmProvider(env({ LLM_PROVIDER: 'openai' })).name).toBe('stub');
     expect(createLlmProvider(env({ LLM_PROVIDER: 'stub' })).name).toBe('stub');
+    expect(createLlmProvider(env({ LLM_PROVIDER: 'stub', OPENAI_API_KEY: 'sk-x' })).name).toBe(
+      'stub',
+    );
+  });
+
+  it('exposes the embedding model each provider writes and queries with', () => {
+    const openai = createLlmProvider(
+      env({
+        LLM_PROVIDER: 'openai',
+        OPENAI_API_KEY: 'sk-x',
+        EMBEDDING_MODEL: 'text-embedding-3-small',
+      }),
+    );
+    expect(openai.embeddingModel).toBe('text-embedding-3-small');
+    expect(createLlmProvider(env({ LLM_PROVIDER: 'openai' })).embeddingModel).toBe(
+      'stub-embedding',
+    );
   });
 
   it('selects the mock SMS provider in dev', () => {

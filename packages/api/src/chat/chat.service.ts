@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   buildGroundedPrompt,
   MAX_SUPPORTING_CHUNKS,
-  MIN_SUPPORTING_SIMILARITY,
+  minSupportingSimilarity,
   NOT_IN_CURRICULUM_MESSAGE,
   redactPii,
   SUPPORTING_RELATIVE_RATIO,
@@ -85,12 +85,11 @@ export class ChatService {
       userId,
     );
     const topSimilarity = retrieved[0]?.similarity ?? 0;
-    const threshold = Math.max(
-      MIN_SUPPORTING_SIMILARITY,
-      topSimilarity * SUPPORTING_RELATIVE_RATIO,
-    );
+    const floor =
+      this.env.RETRIEVAL_MIN_SIMILARITY ?? minSupportingSimilarity(this.llm.embeddingModel);
+    const threshold = Math.max(floor, topSimilarity * SUPPORTING_RELATIVE_RATIO);
     const supporting =
-      topSimilarity < MIN_SUPPORTING_SIMILARITY
+      topSimilarity < floor
         ? []
         : retrieved.filter((c) => c.similarity >= threshold).slice(0, MAX_SUPPORTING_CHUNKS);
 

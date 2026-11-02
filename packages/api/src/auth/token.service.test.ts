@@ -93,4 +93,30 @@ describe('TokenService', () => {
       UnauthorizedException,
     );
   });
+
+  it('issues an MFA challenge with a unique jti that verifies back', async () => {
+    const { service } = makeService();
+    const a = await service.issueMfaChallengeToken('user-1');
+    const b = await service.issueMfaChallengeToken('user-1');
+    expect(a.jti).not.toBe(b.jti);
+    await expect(service.verifyMfaChallengeToken(a.token)).resolves.toEqual({
+      userId: 'user-1',
+      jti: a.jti,
+    });
+  });
+
+  it('rejects an MFA challenge without a jti, or a non-challenge token', async () => {
+    const { service } = makeService();
+    const noJti = await new JwtService({}).signAsync(
+      { sub: 'user-1', type: 'mfa' },
+      { secret: 'access-secret' },
+    );
+    await expect(service.verifyMfaChallengeToken(noJti)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+    const { accessToken } = await service.issueTokens('user-1');
+    await expect(service.verifyMfaChallengeToken(accessToken)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+  });
 });

@@ -14,6 +14,7 @@ export function toUserProfile(user: User, tier: SubscriptionTier): UserProfile {
     grade: toGrade(user.grade),
     stream: (user.stream as Stream | null) ?? null,
     locale: user.locale,
+    role: user.role,
     tier,
   };
 }

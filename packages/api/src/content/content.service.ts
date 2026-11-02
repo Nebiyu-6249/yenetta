@@ -65,6 +65,7 @@ export class ContentService {
           {
             prisma: this.prisma,
             embed: (texts) => this.llm.embed(texts).then((r) => r.embeddings),
+            embeddingModel: this.llm.embeddingModel,
           },
           { documentId: doc.id, file, overrides: scopedOverrides },
         );

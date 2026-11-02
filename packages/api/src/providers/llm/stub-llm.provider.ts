@@ -1,4 +1,4 @@
-import { deterministicEmbed } from '@yenetta/shared';
+import { deterministicEmbed, STUB_EMBEDDING_MODEL } from '@yenetta/shared';
 import {
   type LlmChatOptions,
   type LlmChatResult,
@@ -14,6 +14,7 @@ import {
  */
 export class StubLlmProvider implements LlmProvider {
   readonly name = 'stub';
+  readonly embeddingModel = STUB_EMBEDDING_MODEL;
 
   async chat(options: LlmChatOptions): Promise<LlmChatResult> {
     const userMsg = [...options.messages].reverse().find((m) => m.role === 'user')?.content ?? '';
@@ -31,7 +32,7 @@ export class StubLlmProvider implements LlmProvider {
 
   async embed(texts: string[]): Promise<LlmEmbedResult> {
     return {
-      model: 'stub-embedding',
+      model: STUB_EMBEDDING_MODEL,
       embeddings: texts.map((t) => deterministicEmbed(t)),
       inputTokens: texts.reduce((sum, t) => sum + Math.ceil(t.length / 4), 0),
     };

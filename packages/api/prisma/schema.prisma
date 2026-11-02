@@ -90,6 +90,12 @@ model User {
   // at rest; mfaEnabled flips true only after an enrollment code is confirmed.
   mfaSecret  String?
   mfaEnabled Boolean @default(false)
+  // Replay protection: only the latest login challenge (by jti) is valid and it
+  // is consumed on success or dropped after too many wrong codes; a TOTP time
+  // step is accepted at most once.
+  mfaChallengeJti      String?
+  mfaChallengeAttempts Int     @default(0)
+  mfaLastUsedStep      Int?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -452,6 +458,9 @@ model ContentChunk {
   id               String                 @id @default(cuid())
   text             String
   embedding        Unsupported("vector(1536)")?
+  // Model that produced `embedding`. Retrieval only compares vectors from the
+  // active model; `db:reembed` migrates chunks after a model change.
+  embeddingModel   String
   subjectId        String?
   chapterId        String?
   grade            Int?
@@ -473,6 +482,7 @@ model ContentChunk {
   @@index([subjectId, chapterId])
   @@index([type, year])
   @@index([visibility, ownerId])
+  @@index([embeddingModel])
   @@map("content_chunks")
 }
 

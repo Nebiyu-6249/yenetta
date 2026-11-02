@@ -1,4 +1,5 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
+import { countChunksByModel } from '@yenetta/ingestion';
 import { toPgVector } from '@yenetta/shared';
 import { ENV } from '../config/config.module';
 import { type Env } from '../config/env';
@@ -36,14 +37,36 @@ interface RetrievedRow extends Omit<RetrievedChunk, 'similarity'> {
  * Tenant/upload isolation (SECURITY.md LLM04/LLM08): a retrieval only ever sees
  * PUBLIC chunks plus PRIVATE chunks owned by `ownerId`. A student's uploaded
  * document can never surface in another user's answers.
+ *
+ * Vector-space isolation: only chunks embedded with the active embedding model
+ * are searched, since cosine similarity across models is meaningless. Chunks
+ * from another model stay invisible until `db:reembed` is run.
  */
 @Injectable()
-export class RetrievalService {
+export class RetrievalService implements OnApplicationBootstrap {
+  private readonly logger = new Logger(RetrievalService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     @Inject(LLM_PROVIDER) private readonly llm: LlmProvider,
     @Inject(ENV) private readonly env: Env,
   ) {}
+
+  /** Warns at boot when part of the corpus was embedded with another model. */
+  async onApplicationBootstrap(): Promise<void> {
+    try {
+      const counts = await countChunksByModel(this.prisma);
+      const stale = counts.filter((c) => c.embeddingModel !== this.llm.embeddingModel);
+      if (stale.length > 0) {
+        const detail = stale.map((c) => `${c.count} on ${c.embeddingModel}`).join(', ');
+        this.logger.warn(
+          `Content chunks embedded with another model are excluded from retrieval (${detail}; active: ${this.llm.embeddingModel}). Run: pnpm --filter @yenetta/api db:reembed`,
+        );
+      }
+    } catch (err) {
+      this.logger.warn(`Could not check chunk embedding models: ${(err as Error).message}`);
+    }
+  }
 
   async retrieve(
     query: string,
@@ -55,9 +78,9 @@ export class RetrievalService {
     const { embeddings } = await this.llm.embed([query]);
     const vector = toPgVector(embeddings[0] ?? []);
 
-    const conditions: string[] = ['c.embedding IS NOT NULL'];
-    const params: unknown[] = [vector];
-    let p = 2;
+    const conditions: string[] = ['c.embedding IS NOT NULL', 'c."embeddingModel" = $2'];
+    const params: unknown[] = [vector, this.llm.embeddingModel];
+    let p = 3;
 
     // Isolation gate: public content, plus this user's own private content.
     if (ownerId) {

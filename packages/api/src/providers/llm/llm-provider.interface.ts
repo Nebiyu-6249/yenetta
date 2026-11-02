@@ -36,6 +36,8 @@ export interface LlmEmbedResult {
 
 export interface LlmProvider {
   readonly name: string;
+  /** Model id that `embed` uses; stamped on chunks and used to filter retrieval. */
+  readonly embeddingModel: string;
   chat(options: LlmChatOptions): Promise<LlmChatResult>;
   embed(texts: string[]): Promise<LlmEmbedResult>;
 }
