@@ -1,7 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { chunkText } from './chunking';
-import { cosineSimilarity, deterministicEmbed, EMBEDDING_DIM, toPgVector } from './embedding';
-import { buildGroundedPrompt, MIN_SUPPORTING_SIMILARITY } from './prompt';
+import {
+  cosineSimilarity,
+  deterministicEmbed,
+  EMBEDDING_DIM,
+  selectLlmBackend,
+  STUB_EMBEDDING_MODEL,
+  toPgVector,
+} from './embedding';
+import {
+  buildGroundedPrompt,
+  MIN_SUPPORTING_SIMILARITY,
+  MIN_SUPPORTING_SIMILARITY_REAL,
+  minSupportingSimilarity,
+} from './prompt';
 
 describe('deterministicEmbed', () => {
   it('produces a unit-length vector of the right dimension', () => {
@@ -78,5 +90,26 @@ describe('buildGroundedPrompt', () => {
     );
     expect(msgs[0]!.content).toContain('አማርኛ');
     expect(msgs[0]!.content).toContain('STUDENT CONTEXT');
+  });
+});
+
+describe('selectLlmBackend', () => {
+  it('uses OpenAI only when selected and a key is present', () => {
+    expect(selectLlmBackend({ LLM_PROVIDER: 'openai', OPENAI_API_KEY: 'sk-x' })).toBe('openai');
+    expect(selectLlmBackend({ OPENAI_API_KEY: 'sk-x' })).toBe('openai');
+    expect(selectLlmBackend({ LLM_PROVIDER: 'openai', OPENAI_API_KEY: '' })).toBe('stub');
+    expect(selectLlmBackend({ LLM_PROVIDER: 'openai' })).toBe('stub');
+  });
+
+  it('honors an explicit stub provider even when a key is set', () => {
+    expect(selectLlmBackend({ LLM_PROVIDER: 'stub', OPENAI_API_KEY: 'sk-x' })).toBe('stub');
+  });
+});
+
+describe('minSupportingSimilarity', () => {
+  it('keeps the stub-tuned floor for the stub and a higher floor for real models', () => {
+    expect(minSupportingSimilarity(STUB_EMBEDDING_MODEL)).toBe(MIN_SUPPORTING_SIMILARITY);
+    expect(minSupportingSimilarity('text-embedding-3-small')).toBe(MIN_SUPPORTING_SIMILARITY_REAL);
+    expect(MIN_SUPPORTING_SIMILARITY_REAL).toBeGreaterThan(MIN_SUPPORTING_SIMILARITY);
   });
 });

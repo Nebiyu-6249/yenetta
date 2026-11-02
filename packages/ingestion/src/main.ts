@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { Worker, type ConnectionOptions } from 'bullmq';
-import { createEmbedder } from './embed';
+import { createEmbedder, embedConfigFromEnv } from './embed';
 import { INGESTION_QUEUE, type IngestionJobData } from './queue';
 import { runIngestionPipeline } from './run-pipeline';
 
@@ -23,18 +23,14 @@ function redisConnection(): ConnectionOptions {
 async function main(): Promise<void> {
   const connection = redisConnection();
   const prisma = new PrismaClient();
-  const embed = createEmbedder({
-    provider: process.env.OPENAI_API_KEY ? 'openai' : 'stub',
-    openaiApiKey: process.env.OPENAI_API_KEY,
-    embeddingModel: process.env.EMBEDDING_MODEL ?? 'text-embedding-3-small',
-  });
+  const { embed, model: embeddingModel } = createEmbedder(embedConfigFromEnv(process.env));
 
   const worker = new Worker<IngestionJobData>(
     INGESTION_QUEUE,
     async (job) => {
       const { documentId, file, overrides } = job.data;
       return runIngestionPipeline(
-        { prisma, embed },
+        { prisma, embed, embeddingModel },
         {
           documentId,
           file: {
@@ -54,7 +50,9 @@ async function main(): Promise<void> {
     console.error(`[ingestion] job ${job?.id} failed:`, err.message),
   );
 
-  console.log(`[ingestion] worker ready on queue "${INGESTION_QUEUE}"`);
+  console.log(
+    `[ingestion] worker ready on queue "${INGESTION_QUEUE}" (embedding model: ${embeddingModel})`,
+  );
 }
 
 void main();

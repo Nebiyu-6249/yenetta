@@ -53,6 +53,12 @@ export const envSchema = z.object({
   FREE_TIER_DAILY_AI_LIMIT: z.coerce.number().int().nonnegative().default(20),
   PREMIUM_TIER_DAILY_AI_LIMIT: z.coerce.number().int().nonnegative().default(300),
   RETRIEVAL_TOP_K: z.coerce.number().int().positive().default(6),
+  // Supporting-similarity floor override. Unset/blank: per-model default
+  // (stub 0.18, real models 0.30) - tune on real content during the pilot.
+  RETRIEVAL_MIN_SIMILARITY: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.coerce.number().min(0).max(1).optional(),
+  ),
   MAX_OUTPUT_TOKENS: z.coerce.number().int().positive().default(1200),
 });
 

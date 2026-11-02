@@ -51,17 +51,17 @@ export class AuthService {
 
     const user = await this.users.findOrCreateByPhone(phone);
     if (this.mfa.isRequired(user)) {
-      return { mfaRequired: true, mfaToken: await this.tokens.issueMfaChallengeToken(user.id) };
+      const { token, jti } = await this.tokens.issueMfaChallengeToken(user.id);
+      await this.mfa.startChallenge(user.id, jti);
+      return { mfaRequired: true, mfaToken: token };
     }
     return this.completeLogin(user, ip, false);
   }
 
   /** Second factor: validates the challenge token + TOTP code, then logs in. */
   async verifyMfaAndLogin(mfaToken: string, code: string, ip?: string): Promise<LoginResult> {
-    const userId = await this.tokens.verifyMfaChallengeToken(mfaToken);
-    if (!(await this.mfa.verifyCode(userId, code))) {
-      throw new UnauthorizedException('Invalid authentication code');
-    }
+    const { userId, jti } = await this.tokens.verifyMfaChallengeToken(mfaToken);
+    await this.mfa.verifyChallenge(userId, jti, code, ip);
     const user = await this.users.findById(userId);
     return this.completeLogin(user, ip, true);
   }
@@ -70,7 +70,11 @@ export class AuthService {
     return this.tokens.rotateRefreshToken(refreshToken);
   }
 
-  private async completeLogin(user: User, ip: string | undefined, viaMfa: boolean): Promise<LoginResult> {
+  private async completeLogin(
+    user: User,
+    ip: string | undefined,
+    viaMfa: boolean,
+  ): Promise<LoginResult> {
     const entitlement = await this.entitlements.resolve(user.id);
     const { accessToken, refreshToken } = await this.tokens.issueTokens(user.id);
     await this.audit.record({

@@ -3,6 +3,7 @@ import {
   base32Decode,
   base32Encode,
   generateTotpSecret,
+  matchTotpStep,
   otpauthUri,
   totpCode,
   verifyTotp,
@@ -56,6 +57,22 @@ describe('verifyTotp', () => {
     const now = Date.now();
     expect(verifyTotp(RFC_SECRET, 'abcdef', now)).toBe(false);
     expect(verifyTotp(RFC_SECRET, '12345', now)).toBe(false);
+  });
+});
+
+describe('matchTotpStep', () => {
+  it('returns the time step the code belongs to, for replay tracking', () => {
+    const now = Date.UTC(2026, 10, 2, 12, 0, 15);
+    const step = Math.floor(now / 1000 / 30);
+    expect(matchTotpStep(RFC_SECRET, totpCode(RFC_SECRET, now), now)).toBe(step);
+    expect(matchTotpStep(RFC_SECRET, totpCode(RFC_SECRET, now - 30_000), now)).toBe(step - 1);
+    expect(matchTotpStep(RFC_SECRET, totpCode(RFC_SECRET, now + 30_000), now)).toBe(step + 1);
+  });
+
+  it('returns null for a wrong or out-of-window code', () => {
+    const now = Date.UTC(2026, 10, 2, 12, 0, 15);
+    expect(matchTotpStep(RFC_SECRET, totpCode(RFC_SECRET, now - 90_000), now)).toBeNull();
+    expect(matchTotpStep(RFC_SECRET, 'abcdef', now)).toBeNull();
   });
 });
 

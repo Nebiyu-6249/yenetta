@@ -5,6 +5,73 @@ committed before pausing for human review (see `docs/BUILD_BRIEF.md` §0).
 
 ---
 
+## Validation defect fixes — _done (2026-11-02)_
+
+Fixes for defects 1, 2 and 4 found by the core validation below. Defect 3 is
+unchanged with the stub and must be re-checked once a real embedding key is set.
+
+### What was done
+
+- **Embedding-model consistency (defect 2).** `content_chunks` now records
+  `embeddingModel` (migration `20261102120000_chunk_embedding_model`, existing
+  rows backfilled as `stub-embedding`, NOT NULL with no default so a writer that
+  forgets it fails loudly). Every writer stamps the model: inline ingestion,
+  the BullMQ worker, and the seed. The seed now embeds with the same backend as
+  the API instead of always using the stub. Retrieval only searches chunks from
+  the active model, and the API logs a warning at boot when some are excluded.
+  One shared rule, `selectLlmBackend`, decides OpenAI vs stub everywhere. This
+  also fixes the worker using OpenAI whenever a key was present, even with
+  `LLM_PROVIDER=stub`.
+- **Re-embed job.** `pnpm --filter @yenetta/api db:reembed` re-embeds chunks
+  written with another model, in batches, from their stored text. Idempotent.
+- **Per-model similarity floor.** Stub keeps 0.18; real models start at 0.30;
+  `RETRIEVAL_MIN_SIMILARITY` overrides both.
+- **MFA replay (defect 1).** Login challenges carry a `jti` recorded on the user
+  (migration `20261102120100_mfa_replay_protection`): only the latest challenge
+  is valid, it is consumed atomically on success, and it is dropped after 5
+  wrong codes (audited as `mfa.challenge_locked`). Each TOTP time step is
+  accepted at most once (`mfaLastUsedStep`, conditional update), across
+  confirm, login and disable.
+- **Role in the login profile (defect 4).** `UserProfile.role` is returned by
+  login and `/users/me`.
+- **Tests:** 131 to 157 (api 99, shared 40, ingestion 11, mobile 7): backend
+  selection, per-model floor, embedder model reporting, pipeline stamping,
+  re-embed batching, retrieval model filter + boot warning, challenge jti,
+  TOTP step matching, code replay, challenge consume/supersede/lockout.
+
+### Acceptance checks (live, Docker Desktop stack)
+
+| Check | Result |
+| --- | --- |
+| Full live check script | 87/87 pass (was 80/84) |
+| Reused TOTP code from enrollment | 401 |
+| MFA challenge + code replayed | 401 |
+| Consumed MFA challenge + fresh valid code | 401 |
+| Fresh code on a live challenge | 200, full login |
+| Corpus labelled with another model | honest fallback (no cross-model answers); boot warning names 12 excluded chunks |
+| `db:reembed` | 12 re-embedded; same question grounded again; second run re-embeds 0 |
+| `prisma migrate diff` vs live DB | no drift |
+| Login profile | `role: "admin"` for the admin |
+
+`pnpm lint`, `pnpm typecheck`, `pnpm test` all pass.
+
+### Assumptions
+
+- `MIN_SUPPORTING_SIMILARITY_REAL = 0.30` is a starting point, not tuned:
+  calibrate on real curriculum during the pilot (or set
+  `RETRIEVAL_MIN_SIMILARITY`).
+- MFA lockout is per challenge (5 wrong codes, then restart from phone + OTP,
+  which is itself rate-limited to 5 per phone per hour), not a timed account
+  lock.
+
+### Next
+
+- Add `OPENAI_API_KEY`, run `db:reembed`, then re-check defect 3 and tune the
+  similarity floor on real content (handoff step B: Marker -> `/admin` ->
+  verify grounding).
+
+---
+
 ## Core validation on real infrastructure — _done (2026-11-02)_
 
 First run of the stack on persistent infrastructure (Windows 11, Docker Desktop
@@ -45,7 +112,7 @@ without keys (mock checkout URL, webhooks signed with a local
     `/practice`, `/dashboard`, `/paywall`, `/admin`, `robots.txt`,
     `sitemap.xml`) compile and return 200. UI click-through not yet done.
 
-### Defects found (not yet fixed)
+### Defects found (1, 2 and 4 fixed in "Validation defect fixes" above)
 
 1. **MFA challenge is replayable (security).** `/auth/mfa/verify` accepted the
    same `mfaToken` + TOTP code twice and issued two full sessions. The

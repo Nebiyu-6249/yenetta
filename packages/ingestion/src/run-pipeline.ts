@@ -8,6 +8,8 @@ import { cleanText } from './pipeline';
 export interface IngestionDeps {
   prisma: PrismaClient;
   embed: EmbedFn;
+  /** Model id `embed` produces vectors for; stamped on every chunk. */
+  embeddingModel: string;
 }
 
 export interface IngestionOverrides {
@@ -39,7 +41,7 @@ export interface IngestionResult {
  * document replaces its previous chunks.
  */
 export async function runIngestionPipeline(
-  { prisma, embed }: IngestionDeps,
+  { prisma, embed, embeddingModel }: IngestionDeps,
   input: IngestionInput,
 ): Promise<IngestionResult> {
   const { documentId, file } = input;
@@ -75,8 +77,8 @@ export async function runIngestionPipeline(
       // Raw SQL because Prisma cannot write the pgvector `embedding` column.
       await prisma.$executeRawUnsafe(
         `INSERT INTO content_chunks
-           (id, text, embedding, "subjectId", "chapterId", grade, type, year, "sourceDocumentId", "ownerId", visibility, "createdAt")
-         VALUES ($1, $2, $3::vector, $4, $5, $6, $7::"ContentType", $8, $9, $10, $11, now())`,
+           (id, text, embedding, "embeddingModel", "subjectId", "chapterId", grade, type, year, "sourceDocumentId", "ownerId", visibility, "createdAt")
+         VALUES ($1, $2, $3::vector, $12, $4, $5, $6, $7::"ContentType", $8, $9, $10, $11, now())`,
         randomUUID(),
         chunks[i],
         toPgVector(embeddings[i]!),
@@ -88,6 +90,7 @@ export async function runIngestionPipeline(
         documentId,
         ownerId,
         visibility,
+        embeddingModel,
       );
     }
 

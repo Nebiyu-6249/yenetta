@@ -84,20 +84,22 @@ export function totpCode(
 }
 
 /**
- * Verifies a submitted code, accepting the adjacent time steps within `window`
- * to tolerate clock drift. Uses a constant-time compare to avoid leaking timing.
+ * Matches a submitted code against the adjacent time steps within `window`
+ * (clock-drift tolerance) and returns the matching step counter, or null.
+ * Callers use the step to reject a code that was already accepted (replay).
+ * Uses a constant-time compare to avoid leaking timing.
  */
-export function verifyTotp(
+export function matchTotpStep(
   base32Secret: string,
   token: string,
   atMs: number = Date.now(),
   window = 1,
   digits: number = TOTP_DIGITS,
   stepSeconds: number = TOTP_STEP_SECONDS,
-): boolean {
+): number | null {
   const normalized = token.trim();
   if (!/^\d+$/.test(normalized) || normalized.length !== digits) {
-    return false;
+    return null;
   }
   const key = base32Decode(base32Secret);
   const counter = Math.floor(atMs / 1000 / stepSeconds);
@@ -106,10 +108,22 @@ export function verifyTotp(
     const a = Buffer.from(candidate);
     const b = Buffer.from(normalized);
     if (a.length === b.length && timingSafeEqual(a, b)) {
-      return true;
+      return counter + error;
     }
   }
-  return false;
+  return null;
+}
+
+/** True when the code matches a time step within `window` (no replay check). */
+export function verifyTotp(
+  base32Secret: string,
+  token: string,
+  atMs: number = Date.now(),
+  window = 1,
+  digits: number = TOTP_DIGITS,
+  stepSeconds: number = TOTP_STEP_SECONDS,
+): boolean {
+  return matchTotpStep(base32Secret, token, atMs, window, digits, stepSeconds) !== null;
 }
 
 /** Builds the otpauth:// provisioning URI an authenticator app scans. */

@@ -4,8 +4,27 @@
  * content, which is treated as untrusted.
  */
 
-/** Minimum cosine similarity for a retrieved chunk to count as "supporting". */
+import { STUB_EMBEDDING_MODEL } from './embedding';
+
+/**
+ * Minimum cosine similarity for a retrieved chunk to count as "supporting",
+ * tuned for the deterministic stub embedder.
+ */
 export const MIN_SUPPORTING_SIMILARITY = 0.18;
+
+/**
+ * Starting floor for real embedding models (e.g. text-embedding-3-small),
+ * whose cosine scores run higher than the stub's even for unrelated text.
+ * Not yet tuned on real curriculum: override with RETRIEVAL_MIN_SIMILARITY.
+ */
+export const MIN_SUPPORTING_SIMILARITY_REAL = 0.3;
+
+/** The supporting-similarity floor for the embedding model in use. */
+export function minSupportingSimilarity(embeddingModel: string): number {
+  return embeddingModel === STUB_EMBEDDING_MODEL
+    ? MIN_SUPPORTING_SIMILARITY
+    : MIN_SUPPORTING_SIMILARITY_REAL;
+}
 
 /** A supporting chunk must also be within this fraction of the top match. */
 export const SUPPORTING_RELATIVE_RATIO = 0.55;

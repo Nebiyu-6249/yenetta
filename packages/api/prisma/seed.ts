@@ -1,8 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { PrismaClient, type Stream } from '@prisma/client';
-import { deterministicEmbed, toPgVector } from '@yenetta/shared';
+import { createEmbedder, embedConfigFromEnv } from '@yenetta/ingestion';
+import { toPgVector } from '@yenetta/shared';
 
 const prisma = new PrismaClient();
+// Same backend the API embeds queries with, so seeded chunks are retrievable.
+const embedder = createEmbedder(embedConfigFromEnv(process.env));
 
 interface SeedChapter {
   unitNo: number;
@@ -138,23 +141,25 @@ async function insertChunk(params: {
   type: 'curriculum' | 'exam_question';
   year: number | null;
 }): Promise<void> {
+  const [vector] = await embedder.embed([params.text]);
   await prisma.$executeRawUnsafe(
     `INSERT INTO content_chunks
-       (id, text, embedding, "subjectId", "chapterId", grade, type, year, "createdAt")
-     VALUES ($1, $2, $3::vector, $4, $5, $6, $7::"ContentType", $8, now())`,
+       (id, text, embedding, "embeddingModel", "subjectId", "chapterId", grade, type, year, "createdAt")
+     VALUES ($1, $2, $3::vector, $9, $4, $5, $6, $7::"ContentType", $8, now())`,
     randomUUID(),
     params.text,
-    toPgVector(deterministicEmbed(params.text)),
+    toPgVector(vector!),
     params.subjectId,
     params.chapterId,
     params.grade,
     params.type,
     params.year,
+    embedder.model,
   );
 }
 
 async function main(): Promise<void> {
-  console.log('Seeding Yenetta sample dataset...');
+  console.log(`Seeding Yenetta sample dataset (embedding model: ${embedder.model})...`);
 
   // Idempotent: clear seed-origin chunks (those without a source document).
   await prisma.$executeRawUnsafe(`DELETE FROM content_chunks WHERE "sourceDocumentId" IS NULL`);

@@ -53,24 +53,28 @@ export class TokenService {
    * is still outstanding. It authorises only the `/auth/mfa/verify` step, never
    * API access, so a stolen challenge cannot reach protected routes.
    */
-  async issueMfaChallengeToken(userId: string): Promise<string> {
-    return this.jwt.signAsync(
-      { sub: userId, type: 'mfa' },
+  async issueMfaChallengeToken(userId: string): Promise<{ token: string; jti: string }> {
+    // The jti is recorded on the user (MfaService.startChallenge) so the
+    // challenge is single-use: a valid signature alone is not enough.
+    const jti = randomUUID();
+    const token = await this.jwt.signAsync(
+      { sub: userId, type: 'mfa', jti },
       { secret: this.env.JWT_ACCESS_SECRET, expiresIn: '5m' },
     );
+    return { token, jti };
   }
 
-  async verifyMfaChallengeToken(token: string): Promise<string> {
-    let payload: { sub: string; type?: string };
+  async verifyMfaChallengeToken(token: string): Promise<{ userId: string; jti: string }> {
+    let payload: { sub: string; type?: string; jti?: string };
     try {
       payload = await this.jwt.verifyAsync(token, { secret: this.env.JWT_ACCESS_SECRET });
     } catch {
       throw new UnauthorizedException('Invalid or expired MFA challenge');
     }
-    if (payload.type !== 'mfa') {
+    if (payload.type !== 'mfa' || !payload.jti) {
       throw new UnauthorizedException('Wrong token type');
     }
-    return payload.sub;
+    return { userId: payload.sub, jti: payload.jti };
   }
 
   async verifyAccessToken(token: string): Promise<AccessTokenPayload> {

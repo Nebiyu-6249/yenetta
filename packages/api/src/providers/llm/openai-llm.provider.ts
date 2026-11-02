@@ -32,6 +32,10 @@ export class OpenAiLlmProvider implements LlmProvider {
 
   constructor(private readonly config: OpenAiModelConfig) {}
 
+  get embeddingModel(): string {
+    return this.config.embedding;
+  }
+
   modelForTier(tier: LlmChatOptions['tier']): string {
     switch (tier) {
       case 'hard':

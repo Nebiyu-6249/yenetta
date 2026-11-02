@@ -14,6 +14,10 @@ export type ContentType = 'curriculum' | 'exam_question';
 
 export type Locale = 'en' | 'am';
 
+/** Access role. Authorization is always enforced server-side; clients use it
+ * only to decide what to show (e.g. the admin console link). */
+export type UserRole = 'student' | 'admin';
+
 export interface UserProfile {
   id: string;
   phone: string;
@@ -21,6 +25,7 @@ export interface UserProfile {
   grade: Grade | null;
   stream: Stream | null;
   locale: Locale;
+  role: UserRole;
   tier: SubscriptionTier;
 }
 

@@ -25,9 +25,8 @@ study.
 > and [`docs/BUILD_BRIEF.md`](./docs/BUILD_BRIEF.md) for the full build plan.
 >
 > **Validated 2026-11-02** on Docker Desktop (Postgres 16 + pgvector, Redis):
-> every M0-M7 API route returns real data. Open defects (MFA challenge replay,
-> embedding-model mismatch once an OpenAI key is set) are listed in
-> `PROGRESS.md` under "Core validation on real infrastructure".
+> every M0-M7 API route returns real data. The defects it found (MFA replay,
+> embedding-model mismatch) are fixed; see `PROGRESS.md`.
 
 ## Monorepo layout
 
@@ -143,6 +142,12 @@ guard unless marked public.
 dev) or `queue` (the API enqueues and the **BullMQ ingestion worker** processes
 it). Run the worker with `pnpm --filter @yenetta/ingestion dev`. The web admin
 page at `/admin` uploads documents and watches their status.
+
+Each chunk records the embedding model that produced it, and retrieval only
+searches the active model's chunks. **After adding or changing
+`OPENAI_API_KEY` or `EMBEDDING_MODEL`, run
+`pnpm --filter @yenetta/api db:reembed`**; until then the API logs a warning
+at boot and the affected chunks are not retrievable.
 
 ### Grounding & cost control
 

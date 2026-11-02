@@ -1,16 +1,14 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import type { User } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { ENV } from '../config/config.module';
 import { type Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { decryptSecret, encryptSecret } from './secret-cipher';
-import { generateTotpSecret, otpauthUri, verifyTotp } from './totp';
+import { generateTotpSecret, matchTotpStep, otpauthUri } from './totp';
+
+/** Wrong codes allowed against one login challenge before it is dropped. */
+export const MAX_MFA_CHALLENGE_ATTEMPTS = 5;
 
 export interface MfaEnrollment {
   /** Base32 secret to type into an authenticator app manually. */
@@ -29,7 +27,9 @@ export class MfaService {
 
   /** Key material for encrypting stored secrets (dedicated key or derived). */
   private keyMaterial(): string {
-    return this.env.MFA_ENCRYPTION_KEY ?? `${this.env.JWT_ACCESS_SECRET}:${this.env.JWT_REFRESH_SECRET}`;
+    return (
+      this.env.MFA_ENCRYPTION_KEY ?? `${this.env.JWT_ACCESS_SECRET}:${this.env.JWT_REFRESH_SECRET}`
+    );
   }
 
   /** True when the user must present a TOTP code to complete login. */
@@ -53,7 +53,13 @@ export class MfaService {
     const secret = generateTotpSecret();
     await this.prisma.user.update({
       where: { id: userId },
-      data: { mfaSecret: encryptSecret(secret, this.keyMaterial()), mfaEnabled: false },
+      data: {
+        mfaSecret: encryptSecret(secret, this.keyMaterial()),
+        mfaEnabled: false,
+        mfaLastUsedStep: null,
+        mfaChallengeJti: null,
+        mfaChallengeAttempts: 0,
+      },
     });
     return { secret, otpauthUri: otpauthUri(secret, accountLabel, this.env.MFA_ISSUER) };
   }
@@ -67,7 +73,7 @@ export class MfaService {
     if (!user?.mfaSecret) {
       throw new BadRequestException('No enrollment in progress');
     }
-    if (!verifyTotp(decryptSecret(user.mfaSecret, this.keyMaterial()), code)) {
+    if (!(await this.acceptCode(userId, user.mfaSecret, code))) {
       throw new UnauthorizedException('Invalid authentication code');
     }
     if (!user.mfaEnabled) {
@@ -76,7 +82,7 @@ export class MfaService {
     }
   }
 
-  /** Verifies a login-time code for a user with MFA enabled. */
+  /** Verifies (and consumes) a code for a user with MFA enabled. */
   async verifyCode(userId: string, code: string): Promise<boolean> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -85,7 +91,47 @@ export class MfaService {
     if (!user?.mfaEnabled || !user.mfaSecret) {
       return false;
     }
-    return verifyTotp(decryptSecret(user.mfaSecret, this.keyMaterial()), code);
+    return this.acceptCode(userId, user.mfaSecret, code);
+  }
+
+  /**
+   * Records a freshly issued login challenge. Only this jti is accepted by
+   * `verifyChallenge`, so an older challenge stops working on the next login.
+   */
+  async startChallenge(userId: string, jti: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { mfaChallengeJti: jti, mfaChallengeAttempts: 0 },
+    });
+  }
+
+  /**
+   * Completes the second factor: the challenge must be the user's current one,
+   * the code must be a not-yet-used time step, and the challenge is consumed
+   * so it cannot mint a second session. Wrong codes count against the
+   * challenge; after MAX_MFA_CHALLENGE_ATTEMPTS it is dropped and the user
+   * must restart from phone + OTP.
+   */
+  async verifyChallenge(userId: string, jti: string, code: string, ip?: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { mfaSecret: true, mfaEnabled: true, mfaChallengeJti: true },
+    });
+    if (!user?.mfaEnabled || !user.mfaSecret || user.mfaChallengeJti !== jti) {
+      throw new UnauthorizedException('Invalid or expired MFA challenge');
+    }
+    if (!(await this.acceptCode(userId, user.mfaSecret, code))) {
+      await this.recordFailedAttempt(userId, jti, ip);
+      throw new UnauthorizedException('Invalid authentication code');
+    }
+    // Consume atomically: of two concurrent requests, only one can clear it.
+    const { count } = await this.prisma.user.updateMany({
+      where: { id: userId, mfaChallengeJti: jti },
+      data: { mfaChallengeJti: null, mfaChallengeAttempts: 0 },
+    });
+    if (count !== 1) {
+      throw new UnauthorizedException('Invalid or expired MFA challenge');
+    }
   }
 
   /** Disables MFA after re-verifying a current code (never on code alone). */
@@ -95,8 +141,53 @@ export class MfaService {
     }
     await this.prisma.user.update({
       where: { id: userId },
-      data: { mfaSecret: null, mfaEnabled: false },
+      data: {
+        mfaSecret: null,
+        mfaEnabled: false,
+        mfaLastUsedStep: null,
+        mfaChallengeJti: null,
+        mfaChallengeAttempts: 0,
+      },
     });
     await this.audit.record({ action: 'mfa.disabled', actorUserId: userId, ip });
+  }
+
+  /**
+   * Accepts a code at most once: it must match a time step later than the
+   * last accepted one, recorded atomically so a replayed (or concurrent) use
+   * of the same code fails.
+   */
+  private async acceptCode(
+    userId: string,
+    encryptedSecret: string,
+    code: string,
+  ): Promise<boolean> {
+    const step = matchTotpStep(decryptSecret(encryptedSecret, this.keyMaterial()), code);
+    if (step === null) {
+      return false;
+    }
+    const { count } = await this.prisma.user.updateMany({
+      where: { id: userId, OR: [{ mfaLastUsedStep: null }, { mfaLastUsedStep: { lt: step } }] },
+      data: { mfaLastUsedStep: step },
+    });
+    return count === 1;
+  }
+
+  private async recordFailedAttempt(userId: string, jti: string, ip?: string): Promise<void> {
+    await this.prisma.user.updateMany({
+      where: { id: userId, mfaChallengeJti: jti },
+      data: { mfaChallengeAttempts: { increment: 1 } },
+    });
+    const { count } = await this.prisma.user.updateMany({
+      where: {
+        id: userId,
+        mfaChallengeJti: jti,
+        mfaChallengeAttempts: { gte: MAX_MFA_CHALLENGE_ATTEMPTS },
+      },
+      data: { mfaChallengeJti: null, mfaChallengeAttempts: 0 },
+    });
+    if (count > 0) {
+      await this.audit.record({ action: 'mfa.challenge_locked', actorUserId: userId, ip });
+    }
   }
 }

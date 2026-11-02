@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { type Env } from '../config/env';
 import { ChatService } from './chat.service';
 
-function makeMocks() {
+function makeMocks(opts: { embeddingModel?: string; env?: Partial<Env> } = {}) {
   const prisma = {
     chatConversation: {
       findFirst: vi.fn().mockResolvedValue(null),
@@ -26,6 +26,7 @@ function makeMocks() {
   const memory = { getContext: vi.fn().mockResolvedValue('') };
   const stats = { award: vi.fn().mockResolvedValue(undefined) };
   const llm = {
+    embeddingModel: opts.embeddingModel ?? 'stub-embedding',
     chat: vi.fn().mockResolvedValue({
       content: 'A cell is the basic unit of life.',
       model: 'stub-cheap',
@@ -33,7 +34,7 @@ function makeMocks() {
       outputTokens: 8,
     }),
   };
-  const env = { RETRIEVAL_TOP_K: 6, MAX_OUTPUT_TOKENS: 1200 } as Env;
+  const env = { RETRIEVAL_TOP_K: 6, MAX_OUTPUT_TOKENS: 1200, ...opts.env } as Env;
 
   const service = new ChatService(
     prisma as never,
@@ -92,6 +93,30 @@ describe('ChatService', () => {
     expect(result.sources).toEqual([]);
     expect(llm.chat).not.toHaveBeenCalled();
     expect(usage.log).toHaveBeenCalledWith(expect.objectContaining({ model: 'fallback' }));
+  });
+
+  it('applies the similarity floor of the active embedding model', async () => {
+    // 0.25 clears the stub floor (0.18) but not the real-model floor (0.30).
+    const weak = [{ ...supportingChunk, similarity: 0.25 }];
+
+    const stub = makeMocks({ embeddingModel: 'stub-embedding' });
+    stub.retrieval.retrieve.mockResolvedValue(weak);
+    expect((await stub.service.chat('user1', 'What is a cell?')).grounded).toBe(true);
+
+    const real = makeMocks({ embeddingModel: 'text-embedding-3-small' });
+    real.retrieval.retrieve.mockResolvedValue(weak);
+    const result = await real.service.chat('user1', 'What is a cell?');
+    expect(result.grounded).toBe(false);
+    expect(real.llm.chat).not.toHaveBeenCalled();
+  });
+
+  it('lets RETRIEVAL_MIN_SIMILARITY override the per-model floor', async () => {
+    const { service, retrieval } = makeMocks({
+      embeddingModel: 'text-embedding-3-small',
+      env: { RETRIEVAL_MIN_SIMILARITY: 0.2 },
+    });
+    retrieval.retrieve.mockResolvedValue([{ ...supportingChunk, similarity: 0.25 }]);
+    expect((await service.chat('user1', 'What is a cell?')).grounded).toBe(true);
   });
 
   it('serves identical questions from cache without calling the LLM', async () => {
