@@ -85,6 +85,21 @@ Then open:
 - **API:** http://localhost:3001/api (try `/api/health`)
 - **Mobile:** scan the Expo QR from the `pnpm dev` output (or `pnpm --filter @yenetta/mobile android`)
 
+### Validating a running stack
+
+The project skill `.claude/skills/yenetta-local-validate/` documents the
+Windows stand-up end to end (including the gotchas) and bundles the scripts.
+With the API running:
+
+```powershell
+node .claude/skills/yenetta-local-validate/scripts/validate-live.mjs .
+```
+
+It exercises every milestone's API (M0-M7), payments webhooks, admin RBAC,
+upload-to-grounding, and the admin TOTP flow, and prints PASS / FAIL / SKIP
+per check. `init-env.mjs` creates a dev `.env` with generated secrets, and
+`similarity-probe.mjs` helps tune the retrieval floor after `db:reembed`.
+
 ### Useful scripts (run from the repo root)
 
 | Command            | What it does                                      |

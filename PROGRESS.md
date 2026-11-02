@@ -5,6 +5,34 @@ committed before pausing for human review (see `docs/BUILD_BRIEF.md` §0).
 
 ---
 
+## Project skill: local stand-up + live validation — _done (2026-11-02)_
+
+Captured this session's stand-up and validation protocol as a project skill so
+a context-less session can repeat it instead of rediscovering it (handoff
+section 7). `.claude/skills/yenetta-local-validate/`:
+
+- `SKILL.md`: state check, Windows prerequisites (per-user corepack shims,
+  Docker Desktop PATH/engine), install, infra, env, migrate/seed + drift
+  check, gates, running api+web, live checks, re-embed after a model change,
+  report template.
+- `scripts/validate-live.mjs`: 83 live checks across M0-M7, payments, RBAC,
+  ingestion and admin MFA; PASS / FAIL / SKIP with reasons; exit 1 on FAIL,
+  2 if the API is down. Verified: 83/83 on the running stack (real OpenAI).
+- `scripts/init-env.mjs` (dev `.env` with generated secrets, never
+  overwrites), `scripts/wait-for.mjs` (cross-shell readiness wait),
+  `scripts/similarity-probe.mjs` (floor calibration; on the seed data the
+  in/out gap midpoint is 0.257).
+- `references/troubleshooting.md`: rate limits, stale embedding model, MFA left
+  enabled, EPERM, Docker, CRLF, CI notes, test-data cleanup SQL.
+
+Dev data note: the test uploads from validation runs were removed; the local
+corpus is the 9 seed chunks, embedded with `text-embedding-3-small`.
+
+Still to capture as skills once the workflows exist: the content-ingestion run
+(Marker -> `/admin` -> verify grounding, handoff step B) and deploy.
+
+---
+
 ## CI repair + critical dependency fixes — _done (2026-11-02)_
 
 - **CI had never run past setup.** All 21 runs since the M0 scaffold failed at
