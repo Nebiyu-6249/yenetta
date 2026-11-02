@@ -23,6 +23,11 @@ study.
 > top of the grounded RAG tutor, study/exam tools, offline-first Android app,
 > and Chapa payments. See [`PROGRESS.md`](./PROGRESS.md) for the milestone log
 > and [`docs/BUILD_BRIEF.md`](./docs/BUILD_BRIEF.md) for the full build plan.
+>
+> **Validated 2026-11-02** on Docker Desktop (Postgres 16 + pgvector, Redis):
+> every M0-M7 API route returns real data. Open defects (MFA challenge replay,
+> embedding-model mismatch once an OpenAI key is set) are listed in
+> `PROGRESS.md` under "Core validation on real infrastructure".
 
 ## Monorepo layout
 

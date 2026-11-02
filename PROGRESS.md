@@ -5,6 +5,89 @@ committed before pausing for human review (see `docs/BUILD_BRIEF.md` §0).
 
 ---
 
+## Core validation on real infrastructure — _done (2026-11-02)_
+
+First run of the stack on persistent infrastructure (Windows 11, Docker Desktop
+29.9, `pgvector/pgvector:pg16` with Postgres 16.15 + vector 0.8.7, Redis 7) from
+a fresh clone at `f76fb85`. Stub LLM (no `OPENAI_API_KEY`), mock SMS, Chapa
+without keys (mock checkout URL, webhooks signed with a local
+`CHAPA_WEBHOOK_SECRET`).
+
+### Results
+
+- **Setup:** `pnpm install`, `pnpm docker:up`, `prisma:migrate` (all 6
+  migrations), `db:seed` all succeed. `prisma migrate diff` against the live DB
+  reports no drift from `schema.prisma`.
+- **Gates:** `pnpm lint` (incl. no-emoji), `pnpm typecheck`, `pnpm test` pass:
+  131 tests (api 82, shared 37, mobile 7, ingestion 5). None of these tests use
+  a database.
+- **Live API check:** 84 scripted checks, 80 passed on the first run. On
+  follow-up, 2 of the 4 failures were errors in the check script, not in the
+  app. **No milestone route returned 404**: M0-M7 all return real data from
+  Postgres.
+  - M1: OTP request/verify, wrong-code 401, `/users/me` 401 to 200, profile
+    update, refresh rotation with old-token reuse rejected, subjects/chapters.
+  - M2: in-curriculum question grounded and cited; out-of-curriculum question
+    gets the honest fallback; repeat served from cache; admin `.md` upload
+    reaches `embedded` and a question about it is grounded on it.
+  - M3: summary/notes/flashcards/quiz generated and cached; quiz attempt;
+    SRS seed (`/srs/due?chapterId=`), review, reschedule; past-paper practice
+    (answers hidden, 2/2 graded); timed mock start/submit; progress.
+  - M6: free 402 on premium routes; checkout; webhook bad signature 401,
+    underpayment 400, success activates Premium (tier free to premium, daily
+    limit 20 to 300), redelivery idempotent; voucher; offline entitlement token.
+  - M7: plans generate/current/adapt/complete; premium study guide; memory;
+    stats, leaderboard opt-in, leaderboard; analytics; `language: "am"` chat.
+  - Admin: student 403 on admin routes; admin documents + audit log; TOTP
+    enroll/confirm; re-login yields only an MFA challenge; challenge token
+    rejected as a bearer; wrong code 401; correct code completes login; disable.
+  - Web: all 11 routes (`/`, `/pricing`, `/login`, `/chat`, `/study`,
+    `/practice`, `/dashboard`, `/paywall`, `/admin`, `robots.txt`,
+    `sitemap.xml`) compile and return 200. UI click-through not yet done.
+
+### Defects found (not yet fixed)
+
+1. **MFA challenge is replayable (security).** `/auth/mfa/verify` accepted the
+   same `mfaToken` + TOTP code twice and issued two full sessions. The
+   challenge is a stateless 5-minute JWT (`TokenService.issueMfaChallengeToken`)
+   and TOTP has no used-step tracking. Fix: single-use challenge (jti stored and
+   consumed) + reject a reused TOTP time step + per-account MFA failure lockout.
+2. **Embedding model mismatch once an OpenAI key is set (blocks the pilot).**
+   `prisma/seed.ts` always writes chunks with `deterministicEmbed`, while
+   queries use `llm.embed` (OpenAI when `OPENAI_API_KEY` is set). Chunks do not
+   record which model embedded them, so enabling the key silently mixes vector
+   spaces. Needs: store the embedding model per chunk, embed seed + ingestion +
+   query with the same provider, filter retrieval by model, and a re-embed job.
+   `MIN_SUPPORTING_SIMILARITY = 0.18` is tuned for the stub and must be
+   re-tuned for real embeddings.
+3. **Stub retrieval false negatives.** "What is photosynthesis?" gets the
+   "not in the curriculum" fallback although the Cell Biology chunk defines
+   photosynthesis (short query vs long multi-topic chunk scores below 0.18).
+   Expected to improve with real embeddings; re-check after defect 2.
+4. **Login profile omits `role`.** `toUserProfile` does not include `role`, so
+   clients cannot tell an admin from a student (RBAC itself works server-side).
+
+### Environment notes for the next session
+
+- `corepack enable` needs admin on Windows; use
+  `corepack enable --install-directory "$env:APPDATA\npm" pnpm` instead.
+- Docker Desktop's CLI is not on PATH in shells opened before it was installed;
+  prepend `C:\Program Files\Docker\Docker\resources\bin`.
+- turbo's `dev` task does not depend on `^build`, and `@yenetta/shared` /
+  `@yenetta/ingestion` are consumed from `dist`. Run `pnpm build` (or lint/test)
+  once before `pnpm dev` on a fresh clone (inferred from config, not reproduced).
+- Prisma's skipped build scripts are harmless: the query and schema engines are
+  fetched by `prisma generate`.
+
+### Assumptions
+
+- Test phones: admin `+251900000001` (`ADMIN_PHONE`), students `+2519[1-3]...`
+  generated per run. Mock SMS only.
+- `.env.example` shipped `OPENAI_API_KEY=sk-...`, which the LLM factory treats
+  as a real key; it is now blank so a copied `.env` uses the offline stub.
+
+---
+
 ## Security & Hardening arc — _complete (2026-08-16)_
 
 Applied the Security & Hardening Build Delta on top of M0-M7. Each batch was
