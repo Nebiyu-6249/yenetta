@@ -5,6 +5,53 @@ committed before pausing for human review (see `docs/BUILD_BRIEF.md` §0).
 
 ---
 
+## CI repair + critical dependency fixes — _done (2026-11-02)_
+
+- **CI had never run past setup.** All 21 runs since the M0 scaffold failed at
+  "Setup pnpm": the workflow pinned `version: 10` while `package.json` pins
+  `packageManager: pnpm@10.33.0`, which `pnpm/action-setup@v4` rejects. Lint,
+  typecheck, test and the dependency audit gate had therefore never run in CI
+  (gitleaks runs before that step and was passing). Removed the duplicate pin;
+  the build/test job now passes in CI.
+- **The audit gate then failed on 5 production criticals:** `next` < 15.5.28
+  (three unauthenticated RCE advisories), `proxy-addr` < 2.0.8 (IP spoofing,
+  via express), `shell-quote` < 1.11.0 (command injection, via react-native).
+  Upgraded to next 15.5.28 (declared floor raised to `^15.5.28`), proxy-addr
+  2.0.8 and shell-quote 1.12.0, all within existing semver ranges, so no pnpm
+  overrides. The lockfile refresh also moved some mobile build tooling
+  (`@babel/*` 7.29.x patch versions, `@jridgewell/sourcemap-codec`) forward.
+- **Verified:** `pnpm audit --prod --audit-level=critical` passes (0 critical;
+  70 high / 34 moderate / 7 low remain); lint, typecheck, 157 tests, and
+  `next build` (14 routes) pass; all 11 web routes 200 with security headers;
+  live API checks pass except 3 chat checks, which failed only because an
+  OpenAI key had just been added to `.env` (boot warning: 12 stub chunks
+  excluded). After `db:reembed` (13 chunks on `text-embedding-3-small`) those
+  chat checks pass.
+
+### First look with real embeddings (`text-embedding-3-small`, seed corpus)
+
+- **Similarity spread (10 probe questions, 13 chunks):** in-curriculum top
+  match 0.31-0.73; out-of-curriculum 0.08-0.21. The 0.30 floor separates them,
+  but "What is photosynthesis?" clears it only at 0.308. Midpoint of the gap is
+  about 0.25: re-tune on the real corpus, not this seed set.
+- **Defect 3 resolved:** "What is photosynthesis?" is grounded (cites Cell
+  Biology) with real embeddings; World Cup / car-engine questions still get
+  the honest fallback.
+- **Amharic answers work but need native-speaker QA:** `language: "am"`
+  returned a grounded Amharic answer, but rendered "hydrogen ions" as a phrase
+  meaning "hydrogen eyes". Review Amharic output (and consider a stronger
+  model for it) before students see it.
+- **Cost logging gap:** chat calls are logged to `usage_events` (5 x
+  gpt-4o-mini = $0.00067), but embedding calls (queries, ingestion, re-embed)
+  are not logged at all.
+- Minor: a grounded answer can list the same chapter twice in `sources` when
+  two chunks of it match (curriculum + exam chunk).
+- **Not taken:** the open Dependabot branch
+  `production-dependencies-b7ed58ad0f` (Next 16 + React 19.2, 18 updates) is a
+  larger migration; review it separately.
+
+---
+
 ## Validation defect fixes — _done (2026-11-02)_
 
 Fixes for defects 1, 2 and 4 found by the core validation below. Defect 3 is

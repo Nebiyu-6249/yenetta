@@ -147,12 +147,21 @@ dedicated CI step, and the pre-commit hook. `[built]`
   integrity + image scanning. `[partial]` - `.github/dependabot.yml` opens
   weekly grouped PRs for the npm tree and GitHub Actions; a CI `security-scan`
   job gates every push/PR with a gitleaks secret scan (verified clean over the
-  full tree and history) and `pnpm audit --prod --audit-level=critical`
-  (currently 0), plus a non-blocking full advisory report so the existing
-  high-severity backlog (mostly transitive/dev: postcss, body-parser, dev
-  vitest) is visible and burned down via Dependabot. `pnpm install
-  --frozen-lockfile` enforces lockfile integrity. Image scanning is `[new]`
-  and lands when the deploy Dockerfiles exist (no container image yet).
+  full tree and history) and `pnpm audit --prod --audit-level=critical`,
+  plus a non-blocking full advisory report so the high-severity backlog is
+  visible and burned down via Dependabot. `pnpm install --frozen-lockfile`
+  enforces lockfile integrity. Image scanning is `[new]` and lands when the
+  deploy Dockerfiles exist (no container image yet).
+  - 2026-11-02: until this date the audit gate never actually ran in CI (a
+    duplicate pnpm version pin failed every run at "Setup pnpm"; gitleaks ran
+    first and passed). Once fixed, the gate found 5 production criticals:
+    `next` < 15.5.28 (three unauthenticated RCE advisories, GHSA-p293-qw3h-jr36,
+    GHSA-2xp9-vwfh-vxw4, GHSA-2464-fhr4-w9xw), `proxy-addr` < 2.0.8 via
+    express (IP spoofing, GHSA-jqcg-44mw-7w3h), `shell-quote` < 1.11.0 via
+    react-native (command injection, GHSA-pqg4-j6r4-53mv). Fixed by upgrading
+    to next 15.5.28, proxy-addr 2.0.8, shell-quote 1.12.0 (within existing
+    ranges). Now 0 critical; 70 high / 34 moderate / 7 low remain in
+    production dependencies `[partial]`.
 
 ## 11. Additional web/infra controls
 
@@ -255,8 +264,9 @@ Do not launch to students until every box is checked:
 - [ ] Encrypted backups with a successfully tested restore.
 - [ ] Secret scan clean; git history purged; keys rotated.
 - [ ] Dependency + container scans clean; SAST run. (CI secret scan +
-      production-critical dependency gate live; high-severity backlog and
-      container image scanning still open.)
+      production-critical dependency gate live and passing since 2026-11-02;
+      70 high-severity production advisories and container image scanning
+      still open.)
 - [ ] Admin + school-admin MFA enforced; audit logging live.
 - [ ] Data-protection: in-country personal-data storage, DPIA done, breach
       process documented, privacy policy + consent live.
