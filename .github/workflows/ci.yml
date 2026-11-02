@@ -15,10 +15,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Version comes from package.json "packageManager"; pinning it here too
+      # makes action-setup@v4 fail with "Multiple versions of pnpm specified".
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -62,10 +62,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # Version comes from package.json "packageManager"; pinning it here too
+      # makes action-setup@v4 fail with "Multiple versions of pnpm specified".
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Setup Node
         uses: actions/setup-node@v4
