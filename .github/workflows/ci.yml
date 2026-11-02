@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Version comes from package.json "packageManager"; pinning it here too
       # makes action-setup@v4 fail with "Multiple versions of pnpm specified".
@@ -50,7 +50,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # Full history so the secret scan covers every commit, not just HEAD.
           fetch-depth: 0
